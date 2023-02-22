@@ -6,13 +6,14 @@ library(shinyscreenshot)
 library(htmltools)
 library(htmlwidgets)
 
+#MAKE SURE YOUR CURRENT WORKING DIRECTORY IS shinyapp (the folder downloaded from github)
 
 r_colors <- rgb(t(col2rgb(colors()) / 255))
 names(r_colors) <- colors()
 
-fulL_dataset <- read.csv("~/Desktop/PWS465/shinyapp/Long_Lat_Point_Data.csv")
+fulL_dataset <- read.csv("Long_Lat_Point_Data.csv")
 
-data_points <- read.csv("~/Desktop/PWS465/shinyapp/Long_Lat_Point_Data.csv") %>%
+data_points <- read.csv("Long_Lat_Point_Data.csv") %>%
   select(c("latusedd", "longusedd", "year", "megadbid"))%>%
   na.omit()
 
@@ -29,7 +30,7 @@ unique_longandlat$Lat<- as.numeric(unique_longandlat$Lat)
 unique_longandlat$Long <- as.numeric(unique_longandlat$Long)
 unique_longandlat$Year <- as.numeric(unique_longandlat$Year)
 
-elemental_data <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F) %>%
+elemental_data <- read.csv("MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F) %>%
   select(c("ba_ppm", "al_ppm", "co_ppm", "megadbid"))
 
 elemental_data$ba_ppm <- as.integer(elemental_data$ba_ppm)
