@@ -33,9 +33,27 @@ unique_longandlat$Year <- as.numeric(unique_longandlat$Year)
 elemental_data <- read.csv("MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F) %>%
   select(c("ba_ppm", "al_ppm", "co_ppm", "megadbid"))
 
-elemental_data$ba_ppm <- as.integer(elemental_data$ba_ppm)
-elemental_data$al_ppm <- as.integer(elemental_data$al_ppm)
-elemental_data$co_ppm <- as.integer(elemental_data$co_ppm)
+## @Emi Categorized ppm 
+## @ToDO: updates for thresholds need to be updated. 
+## could be good to make this into a function later. 
+order = c("Safe", "Moderate", "Toxic", "Lethal")
+elemental_data$ba_ppm_categorized <- cut(elemental_data$ba_ppm, 
+                   breaks=c(-Inf, 5.0 ,14.9, 23.2, Inf), 
+                   labels=order)
+
+elemental_data$al_ppm_categorized <- cut(elemental_data$al_ppm, 
+                   breaks=c(-Inf, 5.0 ,14.9, 23.2, Inf), 
+                   labels=order)
+
+
+elemental_data$co_ppm_categorized <- cut(elemental_data$co_ppm, 
+                   breaks=c(-Inf, 5.0 ,14.9, 23.2, Inf), 
+                   labels=order)
+
+
+elemental_data$ba_ppm <- factor(elemental_data$ba_ppm_categorized, levels=order)
+elemental_data$al_ppm <- factor(elemental_data$al_ppm_categorized, levels = order)
+elemental_data$co_ppm <- factor(elemental_data$co_ppm_categorized, levels=order)
 elemental_data$megadbid <- as.character(elemental_data$megadbid)
 
 plot_elemental_data <- left_join(unique_longandlat, elemental_data, by = "megadbid")
@@ -44,10 +62,27 @@ small_sample_data <- head(plot_elemental_data, 1000)
 class(small_sample_data$Year)
 small_sample_data$Year <- as.numeric(small_sample_data$Year)
 class(small_sample_data)
-pal <- colorNumeric(c("green", "yellow","red"), 1:10 )
-ba_ppm_color <- colorBin(palette = pal(c(1:10)), small_sample_data$ba_ppm, 10)
-co_ppm_color <- colorBin(palette = pal(c(1:10)), small_sample_data$co_ppm, 10)
-al_ppm_color <- colorBin(palette = pal(c(1:10)), small_sample_data$al_ppm, 10)
+pal <- c("green", "yellow","orange", "red")
+ba_ppm_color <- colorBin(palette = pal, small_sample_data$ba_ppm, 4)
+co_ppm_color <- colorBin(palette = pal, small_sample_data$co_ppm, 4)
+al_ppm_color <- colorBin(palette = pal, small_sample_data$al_ppm, 4)
+
+#Emma's original. numerical scale 
+#elemental_data$ba_ppm <- as.integer(elemental_data$ba_ppm)
+#elemental_data$al_ppm <- as.integer(elemental_data$al_ppm)
+#elemental_data$co_ppm <- as.integer(elemental_data$co_ppm)
+#elemental_data$megadbid <- as.character(elemental_data$megadbid)
+#
+#plot_elemental_data <- left_join(unique_longandlat, elemental_data, by = "megadbid")
+#
+#small_sample_data <- head(plot_elemental_data, 1000)
+#class(small_sample_data$Year)
+#small_sample_data$Year <- as.numeric(small_sample_data$Year)
+#class(small_sample_data)
+#pal <- colorNumeric(c("green", "yellow","red"), 1:10 )
+#ba_ppm_color <- colorBin(palette = pal(c(1:10)), small_sample_data$ba_ppm, 10)
+#co_ppm_color <- colorBin(palette = pal(c(1:10)), small_sample_data$co_ppm, 10)
+#al_ppm_color <- colorBin(palette = pal(c(1:10)), small_sample_data$al_ppm, 10)
 
 
 # this controls the front end of the app - how you would add new elements
