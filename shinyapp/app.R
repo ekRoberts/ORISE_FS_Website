@@ -45,16 +45,22 @@ order = c("Safe", "Moderate", "Toxic", "Lethal")
 elemental_data$ba_ppm_categorized <- cut(elemental_data$ba_ppm,
                    breaks=c(-Inf, 5.0, 14.9, 23.2, Inf),
                    labels=order)
+## toxic ~> 200.228ppm - 500.571ppm
+## lethal ~> 3003.427ppm - 4004.569ppm
 
 elemental_data$al_ppm_categorized <- cut(elemental_data$al_ppm,
                    breaks=c(-Inf, 5.0, 14.9, 23.2, Inf),
                    labels=order)
-
+##legal limit for air ~> 5 mg/m3
+## toxic ~> -
+## lethal ~> -
 
 elemental_data$co_ppm_categorized <- cut(elemental_data$co_ppm,
                    breaks=c(-Inf, 5.0, 14.9, 23.2, Inf),
                    labels=order)
-
+## normal ~> 0.1 to 2.2 mcg/L in urine sample
+## toxic ~> 100 µg L−1
+## lethal ~>  seems to be pretty high
 
 elemental_data$ba_ppm <- factor(elemental_data$ba_ppm_categorized, levels=order)
 elemental_data$al_ppm <- factor(elemental_data$al_ppm_categorized, levels = order)
