@@ -72,9 +72,9 @@ small_sample_data <- head(plot_elemental_data, 1000)
 class(small_sample_data$Year)
 small_sample_data$Year <- as.numeric(small_sample_data$Year)
 class(small_sample_data)
-ba_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$ba_ppm, levels=order)
-co_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$co_ppm, levels=order)
-al_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$al_ppm, levels=order)
+ba_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$ba_ppm, levels=order, na.color = NA)
+co_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$co_ppm, levels=order, na.color = NA)
+al_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$al_ppm, levels=order, na.color = NA)
 
 #Emma's original. numerical scale 
 # elemental_data$ba_ppm <- as.integer(elemental_data$ba_ppm)
@@ -110,7 +110,7 @@ server <- function(input, output, session) {
 
   #this function updates the data whenever the user updates the slider 
   filteredData <- reactive({
-    small_sample_data [small_sample_data$Year >= input$range[1] & small_sample_data$Year <= input$range[2],]
+    small_sample_data [small_sample_data$Year >= input$range[1] & small_sample_data$Year <= input$range[2],] 
   })
 
   #this gives the map in the UI output its data
@@ -150,6 +150,13 @@ server <- function(input, output, session) {
       hideGroup(c("ba_ppm", "al_ppm", "co_ppm"))
   })
   
+  factop <- function(x) {
+    ifelse(is.na(x), 0, 1)
+  }
+  circleMarkerOutline <- function(x)  {
+    ifelse(is.na(x), F,"black")
+  }
+  
   #whenever the user selects a different year range the points and circles are updated
   observe({
     leafletProxy("mymap", data = filteredData())%>%
@@ -159,9 +166,9 @@ server <- function(input, output, session) {
       #addCircles(~Long, ~Lat, ~ba_ppm*500, stroke = F, color = ~ba_ppm_color(ba_ppm),group = "ba_ppm")%>%
       #addCircles(~Long, ~Lat, ~co_ppm*500, stroke = F, color = ~co_ppm_color(co_ppm) ,group = "co_ppm")%>%
       #addCircleMarkers(~Long, ~Lat, ~al_ppm*500, stroke = F, color = ~al_ppm_color(al_ppm) ,group = "al_ppm")
-      addCircleMarkers(~Long, ~Lat, radius = 7.5,stroke = F, color = ~ba_ppm_color(ba_ppm),opacity = 1,group = "ba_ppm")%>%
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, stroke = F, color = ~co_ppm_color(co_ppm) ,group = "co_ppm")%>%
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, stroke = F, color = ~al_ppm_color(al_ppm) ,group = "al_ppm")
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm),fillOpacity = ~factop(ba_ppm), group = "ba_ppm")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(co_ppm), stroke = T, weight = 0.4, fillColor = ~co_ppm_color(co_ppm), fillOpacity = ~factop(co_ppm) ,group = "co_ppm")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(al_ppm), stroke = T, weight = 0.4, fillColor = ~al_ppm_color(al_ppm), fillOpacity = ~factop(al_ppm) ,group = "al_ppm")
   })
 }
 
