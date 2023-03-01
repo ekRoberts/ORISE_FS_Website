@@ -63,7 +63,7 @@ elemental_data$co_ppm_categorized <- cut(elemental_data$co_ppm,
 ## lethal ~>  seems to be pretty high
 
 elemental_data$ba_ppm <- factor(elemental_data$ba_ppm_categorized, levels=order)
-elemental_data$al_ppm <- factor(elemental_data$al_ppm_categorized, levels = order)
+elemental_data$al_ppm <- factor(elemental_data$al_ppm_categorized, levels=order)
 elemental_data$co_ppm <- factor(elemental_data$co_ppm_categorized, levels=order)
 
 plot_elemental_data <- left_join(unique_longandlat, elemental_data, by = "megadbid")
@@ -97,11 +97,17 @@ al_ppm_color <- colorFactor(palette = "Oranges", small_sample_data$al_ppm, level
 # this controls the front end of the app - how you would add new elements
 ui <- fluidPage(
   
+  tags$style(type = "text/css", "
+             .irs-slider {width: 30px; height: 30px; top: 22px;}
+             .irs-grid-text {font-size: 20px}
+             .irs--shiny .irs-to, .irs--shiny .irs-from, .irs--shiny .irs-single{ font-size: 17px; color: black; background: transparent}"),
+  
   # this renders the map on the page 
   leafletOutput("mymap"),
   p(),
   #this puts the range slider on the page and gives it a max and a min
-  sliderInput("range", "Year", min(small_sample_data$Year), max(small_sample_data$Year), value = range(small_sample_data$Year), step = 1, sep = ""),
+  sliderInput("range", "Year", min(small_sample_data$Year), 2012, value = range(small_sample_data$Year), step = 1, sep = "",
+              width = "40%"),
 )
 
 
@@ -133,21 +139,21 @@ server <- function(input, output, session) {
       #add the ability to select different layers
       addLayersControl(
         baseGroups = c("Basic Map", "Topographical", "Lined Topographical"),
-        overlayGroups = c("ba_ppm", "co_ppm", "al_ppm", "Plot Markers"),
+        overlayGroups = c("Barium", "Cobalt", "Aluminium", "Plot Markers"),
         options = layersControlOptions(collapsed = FALSE)
       )%>%
       #add legends for the element concentrations
     addLegend('bottomleft', pal = ba_ppm_color, values = small_sample_data$ba_ppm,
-              title = 'Color Gradient for ba_ppm',
-              opacity = 1, group = "ba_ppm")%>%
+              title = 'Color Gradient for Barium (parts per million)',
+              opacity = 1, group = "Barium")%>%
       addLegend('bottomleft', pal = co_ppm_color, values = small_sample_data$co_ppm,
-                title = 'Color Gradient for co_ppm',
-                opacity = 1, group = "co_ppm") %>%
+                title = 'Color Gradient for Cobalt (parts per million)',
+                opacity = 1, group = "Cobalt") %>%
       addLegend('bottomleft', pal = al_ppm_color, values = small_sample_data$al_ppm,
-                title = 'Color Gradient for al_ppm',
-                opacity = 1, group = "al_ppm")%>%
+                title = 'Color Gradient for Aluminium (parts per million)',
+                opacity = 1, group = "Aluminium")%>%
       # don't show these groups till they are selected
-      hideGroup(c("ba_ppm", "al_ppm", "co_ppm"))
+      hideGroup(c("Barium", "Aluminium", "Cobalt"))
   })
   
   factop <- function(x) {
@@ -166,9 +172,9 @@ server <- function(input, output, session) {
       #addCircles(~Long, ~Lat, ~ba_ppm*500, stroke = F, color = ~ba_ppm_color(ba_ppm),group = "ba_ppm")%>%
       #addCircles(~Long, ~Lat, ~co_ppm*500, stroke = F, color = ~co_ppm_color(co_ppm) ,group = "co_ppm")%>%
       #addCircleMarkers(~Long, ~Lat, ~al_ppm*500, stroke = F, color = ~al_ppm_color(al_ppm) ,group = "al_ppm")
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm),fillOpacity = ~factop(ba_ppm), group = "ba_ppm")%>%
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(co_ppm), stroke = T, weight = 0.4, fillColor = ~co_ppm_color(co_ppm), fillOpacity = ~factop(co_ppm) ,group = "co_ppm")%>%
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(al_ppm), stroke = T, weight = 0.4, fillColor = ~al_ppm_color(al_ppm), fillOpacity = ~factop(al_ppm) ,group = "al_ppm")
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm),fillOpacity = ~factop(ba_ppm), group = "Barium")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(co_ppm), stroke = T, weight = 0.4, fillColor = ~co_ppm_color(co_ppm), fillOpacity = ~factop(co_ppm) ,group = "Cobalt")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(al_ppm), stroke = T, weight = 0.4, fillColor = ~al_ppm_color(al_ppm), fillOpacity = ~factop(al_ppm) ,group = "Aluminium")
   })
 }
 
