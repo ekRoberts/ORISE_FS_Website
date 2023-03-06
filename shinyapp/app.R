@@ -68,7 +68,7 @@ elemental_data$co_ppm <- factor(elemental_data$co_ppm_categorized, levels=order)
 
 plot_elemental_data <- left_join(unique_longandlat, elemental_data, by = "megadbid")
 
-small_sample_data <- head(plot_elemental_data, 1000)
+small_sample_data <- head(plot_elemental_data, 5000) #This is where the amt of data points are being used it decided
 class(small_sample_data$Year)
 small_sample_data$Year <- as.numeric(small_sample_data$Year)
 class(small_sample_data)
