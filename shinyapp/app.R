@@ -108,6 +108,12 @@ ui <- fluidPage(
   #this puts the range slider on the page and gives it a max and a min
   sliderInput("range", "Year", min(small_sample_data$Year), 2012, value = range(small_sample_data$Year), step = 1, sep = "",
               width = "40%"),
+  
+  ## a download button that pdownloads the map from the page 
+  downloadButton("mymapDownload", label = "Download Map")
+  
+  ## a download button that generates the report that made the map
+  downloadButton("report", "Generate Report")
 )
 
 
@@ -156,12 +162,41 @@ server <- function(input, output, session) {
       hideGroup(c("Barium", "Aluminium", "Cobalt"))
   })
   
-  factop <- function(x) {
-    ifelse(is.na(x), 0, 1)
-  }
-  circleMarkerOutline <- function(x)  {
-    ifelse(is.na(x), F,"black")
-  }
+#   #@Emi's addin for downloading the map -- not sure if it works yet. 
+#   output$mymapDownload <- downloadHandler(
+#       filename = 'USUFMap.png',
+#       content = function(file) {
+#         #device <- function(..., width, height) {
+#         #  grDevices::png(..., width = width, height = height,
+#         #                 res = 300, units = "in")
+#         #}
+#         ggsave(file, plot = "mymap", device = '.png')
+#       }
+#   )
+  
+#   #@Emi's addin for downloading the report --- not tested to work 
+#   output$report <- downloadHandler(
+#       # For PDF output, change this to "report.pdf"
+#       filename = "report.html",
+#       content = function(file) {
+#         # Copy the report file to a temporary directory before processing it, in
+#         # case we don't have write permissions to the current working dir (which
+#         # can happen when deployed).
+#         tempReport <- file.path(tempdir(), "report.Rmd")
+#         file.copy("report.Rmd", tempReport, overwrite = TRUE)
+
+#         # Set up parameters to pass to Rmd document
+#         params <- list(n = input$slider)
+
+#         # Knit the document, passing in the `params` list, and eval it in a
+#         # child of the global environment (this isolates the code in the document
+#         # from the code in this app).
+#         rmarkdown::render(tempReport, output_file = file,
+#           params = params,
+#           envir = new.env(parent = globalenv())
+#         )
+#       }
+#     )
   
   #whenever the user selects a different year range the points and circles are updated
   observe({
