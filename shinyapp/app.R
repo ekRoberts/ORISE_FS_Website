@@ -107,10 +107,10 @@ ui <- fluidPage(
   p(),
   #this puts the range slider on the page and gives it a max and a min
   sliderInput("range", "Year", min(small_sample_data$Year), 2012, value = range(small_sample_data$Year), step = 1, sep = "",
-              width = "40%"),
+              width = "60%"),
   
   ## a download button that pdownloads the map from the page 
-  downloadButton("mymapDownload", label = "Download Map")
+  downloadButton("mymapDownload", label = "Download Map"),
   
   ## a download button that generates the report that made the map
   downloadButton("report", "Generate Report")
@@ -132,10 +132,10 @@ server <- function(input, output, session) {
     leaflet(data = small_sample_data) %>%
       addEasyButton(easyButton(
         icon="fa-globe", title="Zoom to Level 1",
-        onClick=JS("function(btn, map){ map.setZoom(1); }"))) %>%
+        onClick=JS("function(btn, map){ map.setZoom(24); }"))) %>%
       addEasyButton(easyButton(
         icon="fa-crosshairs", title="Locate Me",
-        onClick=JS("function(btn, map){ map.locate({setView: true}); }"))) %>%
+        onClick=JS("function(btn, map){ map.locate({setView: true}); map.setZoom(14)}"))) %>%
     #leaflet(data = filteredData()) %>%
       # add differnt map layers
       addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE), group = "Basic Map") %>%
@@ -174,6 +174,13 @@ server <- function(input, output, session) {
 #       }
 #   )
   
+  factop <- function(x) {
+    ifelse(is.na(x), 0, 1)
+  }
+  circleMarkerOutline <- function(x)  {
+    ifelse(is.na(x), F,"black")
+  }
+  
 #   #@Emi's addin for downloading the report --- not tested to work 
 #   output$report <- downloadHandler(
 #       # For PDF output, change this to "report.pdf"
@@ -207,7 +214,7 @@ server <- function(input, output, session) {
       #addCircles(~Long, ~Lat, ~ba_ppm*500, stroke = F, color = ~ba_ppm_color(ba_ppm),group = "ba_ppm")%>%
       #addCircles(~Long, ~Lat, ~co_ppm*500, stroke = F, color = ~co_ppm_color(co_ppm) ,group = "co_ppm")%>%
       #addCircleMarkers(~Long, ~Lat, ~al_ppm*500, stroke = F, color = ~al_ppm_color(al_ppm) ,group = "al_ppm")
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm),fillOpacity = ~factop(ba_ppm), group = "Barium")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm), fillOpacity = ~factop(ba_ppm), group = "Barium")%>%
       addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(co_ppm), stroke = T, weight = 0.4, fillColor = ~co_ppm_color(co_ppm), fillOpacity = ~factop(co_ppm) ,group = "Cobalt")%>%
       addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(al_ppm), stroke = T, weight = 0.4, fillColor = ~al_ppm_color(al_ppm), fillOpacity = ~factop(al_ppm) ,group = "Aluminium")
   })
