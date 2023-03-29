@@ -35,6 +35,8 @@ ui <- fluidPage(
       plotOutput("elementalPlot")
     )
   )
+  #downloadButton('downloadPlot'),
+  #downloadButton('downloadData')
 )
 
 server <- function(input, output){
@@ -116,6 +118,19 @@ server <- function(input, output){
       geom_bar()+
       theme(axis.text.x = element_text(angle = 90))
   })
+    
+  #output$downloadPlot <- downloadHandler(
+  #  filename = 'plot.png',
+  #  content = function(file) {
+  #      ggsave(file, plot = output$elementalPlot, device = "png")
+  #  }
+  #)
+   #output$downloadData <- downloadHandler(
+   # filename = 'dataset.csv',
+   # content = function(file) {
+   #   write.csv(variable_data, file)
+   # }
+  #)
 
   }
 
