@@ -10,9 +10,14 @@ googledownload <- function(id) {
 }
 
 #plot_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)
+#lichen_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbLICHEN_2021.06.03V3.csv", stringsAsFactors = F) 
+#elemental_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
+# data is being pulled from : https://drive.google.com/file/d/1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg/view?usp=share_link
 plot_database <- googledownload('1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg')
-lichen_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbLICHEN_2021.06.03V3.csv", stringsAsFactors = F) 
-elemental_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
+# data is being pulled from : https://drive.google.com/file/d/1W1gPV0r4qTStNaKLvpwB-iCD9ogxmYu7/view?usp=share_link
+lichen_database <- googledownload('1W1gPV0r4qTStNaKLvpwB-iCD9ogxmYu7')
+# data is being pulled from : https://drive.google.com/file/d/1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL/view?usp=share_link
+elemental_database <- googledownload('1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL')
 
 
 # plot_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)
