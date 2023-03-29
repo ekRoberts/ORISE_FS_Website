@@ -5,7 +5,12 @@ library(ggplot2)
 
 
 
-plot_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)
+googledownload <- function(id) {
+  read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
+  }
+
+#plot_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)
+plot_database <- googledownload('1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg')
 lichen_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbLICHEN_2021.06.03V3.csv", stringsAsFactors = F) 
 elemental_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
 
@@ -35,8 +40,8 @@ ui <- fluidPage(
       plotOutput("elementalPlot")
     )
   )
-  #downloadButton('downloadPlot'),
-  #downloadButton('downloadData')
+  downloadButton('downloadPlot', label="Download Plot"),
+  downloadButton('downloadData', label="DownloadButton")
 )
 
 server <- function(input, output){
@@ -119,18 +124,18 @@ server <- function(input, output){
       theme(axis.text.x = element_text(angle = 90))
   })
     
-  #output$downloadPlot <- downloadHandler(
-  #  filename = 'plot.png',
-  #  content = function(file) {
-  #      ggsave(file, plot = output$elementalPlot, device = "png")
-  #  }
-  #)
-   #output$downloadData <- downloadHandler(
-   # filename = 'dataset.csv',
-   # content = function(file) {
-   #   write.csv(variable_data, file)
-   # }
-  #)
+  output$downloadPlot <- downloadHandler(
+    filename = 'plot.png',
+    content = function(file) {
+        ggsave(file, plot = output$elementalPlot, device = "png")
+    }
+  )
+  output$downloadData <- downloadHandler(
+   filename = 'dataset.csv',
+   content = function(file) {
+     write.csv(variable_data, file)
+   }
+  )
 
   }
 
