@@ -29,8 +29,12 @@ wilderness_megadbid <- plot_database %>% select(megadbid, wilderns, area)
 
 lichen_database <- left_join(lichen_database, wilderness_megadbid)
 
+element_plot_choices <- c('al_ppm', 'b_ppm', 'ba_ppm', 'be_ppm', 'br_ppm', 'ca_ppm', 'cd_ppm', 'co_ppm', 'cr_ppm', 'cu_ppm', 'f_ppm', 'fe_ppm', 'hg_ppb', 'k_ppm', 'li_ppm', 'mg_ppm', 'mn_ppm', 'mo_ppm', 'na_ppm', 'ni_ppm', 'p_ppm', 'pb_ppm', 'rb_ppm', 'si_ppm', 'sn_ppm', 'sr_ppm', 'ti_ppm', 'v_ppm', 'zn_ppm', 'no3n_ppm')
+plot_plot_choices <- c("Sulfur Airscore", "Nitrogen Airscore")
+lichen_plot_choices <- c("Histogram of Lichen Species")
+
 ui <- fluidPage(
-  titlePanel("Elemental USFS Data"),
+  titlePanel("Database Exploration Tool"),
   sidebarLayout(
     
     sidebarPanel(
@@ -43,7 +47,6 @@ ui <- fluidPage(
       htmlOutput("national_forest_selector"),
       htmlOutput("wilderness_selector"),
       htmlOutput("variable1_selector")
-      
     ),
     mainPanel(
       h3(textOutput("caption")),
@@ -65,10 +68,22 @@ server <- function(input, output){
       data_active = lichen_database %>% 
         rename("reg_id" = nfs_reg)
     }else if(input$data == "Elemental"){
-      data_active = read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
+      data_active = read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)#%>%
+      #mutate(year=make_date(year=year))  
+      
     }else if(input$data == "Plot"){
       data_active = read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)%>% 
         rename("reg_id" = nfs_reg)
+    } 
+  })
+  
+  choice_vector <- reactive({
+    if(input$data == "Lichen"){
+      choice_vector = lichen_plot_choices
+    }else if(input$data == "Elemental"){
+      choice_vector = element_plot_choices
+    }else if(input$data == "Plot"){
+      choice_vector = plot_plot_choices
     } 
   })
   
@@ -107,13 +122,14 @@ server <- function(input, output){
     
     selectInput(inputId = "variable1", #name of input
                 label = "Select an Output:", #label displayed in ui
-                choices = c("Histogram", "List of Wilderness species", "List of plots", "Elemental/Year graph"), #calls list of available counties
+                choices = choice_vector(), 
                 selected = "Histogram"
     )
   })
   
   output$elementalPlot = renderPlot({
     variable_data = data_available() %>% filter(wilderns == input$wilderness)
+    if(input$data == "Lichen"){
     if(input$variable1 == "Histogram"){
       #output$plot1 <- renderPlot({
       ggplot(variable_data, aes(x=sci_22chklst))+
@@ -124,12 +140,29 @@ server <- function(input, output){
       #})
       #plotOutput("plot1")
       
-    }else if(input$variable1 == "List of Wilderness species"){
-      output$table <- renderTable(variable_data)
-    }else if(input$variable1 == "List of plots"){
+    }
+    }else if(input$data == "Elemental"){
+      ggplot(variable_data, aes_string(x=input$variable1, y='year'))+
+        geom_point()+
+        theme_bw()+
+        theme(axis.text.x = element_text(angle = 90))+
+        labs(x = "Element Concentration", title = "Histogram of Element Concentration")
       
-    }else if(input$variable1 == "Elemental/Year graph"){
-      
+    }else if(input$data == "Plot"){
+      if(input$variable1 == "Sulfur Airscore"){
+        ggplot(variable_data, aes_string(x="plot", y='s_airscore'))+
+          geom_col()+
+          theme_bw()+
+          theme(axis.text.x = element_text(angle = 90))+
+          labs(x = "Plot", y = "Sulfur Airscore", title = "Airscore across plots")
+      }else if(input$variable == "Nitrogen Airscore"){
+        ggplot(variable_data, aes_string(x="plot", y='n_airscore'))+
+          geom_col()+
+          theme_bw()+
+          theme(axis.text.x = element_text(angle = 90))+
+          labs(x = "Plot", y = "Nitrogen Airscore", title = "Airscore across plots")
+        
+      }
     }
     
     # ggplot(variable_data, aes_string(x=input$variable1))+
