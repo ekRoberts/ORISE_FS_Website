@@ -11,7 +11,15 @@ library(htmlwidgets)
 r_colors <- rgb(t(col2rgb(colors()) / 255))
 names(r_colors) <- colors()
 
-fulL_dataset <- read.csv("Long_Lat_Point_Data.csv")
+fulL_dataset <- read.csv("Long_Lat_Point_Data.csv") 
+
+#creating data table to match the lichen Species to the megadbid
+lichen_species_data <- read.csv("MegaDbLICHEN_2021.06.03v3.csv") %>% 
+  select(c("megadbid", "scinamepkt")) %>% 
+  distinct(megadbid, .keep_all = TRUE)
+
+#Combine full_dataset with lichen_species_data.   LOOK AT LINES 79 & 80
+#combine_dataset <- 
 
 data_points <- read.csv("Long_Lat_Point_Data.csv") %>%
   select(c("latusedd", "longusedd", "year", "megadbid"))%>%
@@ -66,7 +74,10 @@ elemental_data$ba_ppm <- factor(elemental_data$ba_ppm_categorized, levels=order)
 elemental_data$al_ppm <- factor(elemental_data$al_ppm_categorized, levels=order)
 elemental_data$co_ppm <- factor(elemental_data$co_ppm_categorized, levels=order)
 
-plot_elemental_data <- left_join(unique_longandlat, elemental_data, by = "megadbid")
+plot_elemental_data <- left_join(unique_longandlat, elemental_data, by = "megadbid") 
+
+#Combine small_sample_data and Lichen_species_data based off of megadbid HERE
+small_sample_data <-
 
 small_sample_data <- head(plot_elemental_data, 5000) #This is where the amt of data points are being used it decided
 class(small_sample_data$Year)
@@ -119,6 +130,7 @@ ui <- fluidPage(
 
 # the server function controls the backend of the app
 server <- function(input, output, session) {
+  
 
   #this function updates the data whenever the user updates the slider 
   filteredData <- reactive({
@@ -130,6 +142,7 @@ server <- function(input, output, session) {
     
     # select data
     leaflet(data = small_sample_data) %>%
+      setView(-111.6490794, 40.2447787, 10) %>% 
       addEasyButton(easyButton(
         icon="fa-globe", title="Zoom to Level 1",
         onClick=JS("function(btn, map){ map.setZoom(24); }"))) %>%
@@ -159,7 +172,8 @@ server <- function(input, output, session) {
                 title = 'Color Gradient for Aluminium (parts per million)',
                 opacity = 1, group = "Aluminium")%>%
       # don't show these groups till they are selected
-      hideGroup(c("Barium", "Aluminium", "Cobalt"))
+      hideGroup(c("Barium", "Aluminium", "Cobalt")) 
+      
   })
   
 #   #@Emi's addin for downloading the map -- not sure if it works yet. 
@@ -209,14 +223,16 @@ server <- function(input, output, session) {
   observe({
     leafletProxy("mymap", data = filteredData())%>%
       clearMarkers()%>%
-      addMarkers(~Long, ~Lat, group = "Plot Markers")%>%
+      #popup argument is where optionality of what is shown in popup is determined
+      addMarkers(~Long, ~Lat, group = "Plot Markers", popup = ~htmlEscape(Year))%>%
       clearShapes()%>%
       #addCircles(~Long, ~Lat, ~ba_ppm*500, stroke = F, color = ~ba_ppm_color(ba_ppm),group = "ba_ppm")%>%
       #addCircles(~Long, ~Lat, ~co_ppm*500, stroke = F, color = ~co_ppm_color(co_ppm) ,group = "co_ppm")%>%
       #addCircleMarkers(~Long, ~Lat, ~al_ppm*500, stroke = F, color = ~al_ppm_color(al_ppm) ,group = "al_ppm")
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm), fillOpacity = ~factop(ba_ppm), group = "Barium")%>%
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(co_ppm), stroke = T, weight = 0.4, fillColor = ~co_ppm_color(co_ppm), fillOpacity = ~factop(co_ppm) ,group = "Cobalt")%>%
-      addCircleMarkers(~Long, ~Lat, radius = 7.5, color = ~circleMarkerOutline(al_ppm), stroke = T, weight = 0.4, fillColor = ~al_ppm_color(al_ppm), fillOpacity = ~factop(al_ppm) ,group = "Aluminium")
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, popup = ~htmlEscape(Year), color = ~circleMarkerOutline(ba_ppm), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm), fillOpacity = ~factop(ba_ppm), group = "Barium")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, popup = ~htmlEscape(Year), color = ~circleMarkerOutline(co_ppm), stroke = T, weight = 0.4, fillColor = ~co_ppm_color(co_ppm), fillOpacity = ~factop(co_ppm) ,group = "Cobalt")%>%
+      addCircleMarkers(~Long, ~Lat, radius = 7.5, popup = ~htmlEscape(Year), color = ~circleMarkerOutline(al_ppm), stroke = T, weight = 0.4, fillColor = ~al_ppm_color(al_ppm), fillOpacity = ~factop(al_ppm) ,group = "Aluminium")
+    click<-input$map_marker_click
   })
 }
 
