@@ -6,7 +6,7 @@ library(ggplot2)
 
 
 googledownload <- function(id) {
-  read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id))
+  read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id), row.names=NULL)
 }
 
 #plot_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)
@@ -14,8 +14,13 @@ googledownload <- function(id) {
 #elemental_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
 # data is being pulled from : https://drive.google.com/file/d/1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg/view?usp=share_link
 plot_database <- googledownload('1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg')
+#https://drive.google.com/file/d/1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl/view?usp=share_link
+lichen_1 <-googledownload('1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl')
+#https://drive.google.com/file/d/1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j/view?usp=share_link
+lichen_2 <-googledownload('1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j') 
+lichen_2 = lichen_2 %>% select(-row.names)
+lichen_database <- rbind(lichen_1, lichen_2)
 # data is being pulled from : https://drive.google.com/file/d/1W1gPV0r4qTStNaKLvpwB-iCD9ogxmYu7/view?usp=share_link
-lichen_database <- googledownload('1W1gPV0r4qTStNaKLvpwB-iCD9ogxmYu7')
 # data is being pulled from : https://drive.google.com/file/d/1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL/view?usp=share_link
 elemental_database <- googledownload('1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL')
 
