@@ -106,7 +106,7 @@ server <- function(input, output){
     
     selectInput(inputId = "national_forest", #name of input
                 label = "National Forest:", #label displayed in ui
-                choices = unique(forest_data$area), #calls list of available counties
+                choices = unique(sort(forest_data$area)), #calls list of available counties
                 #selected = unique(data_available)[1]
     )
   })
@@ -116,7 +116,7 @@ server <- function(input, output){
     
     selectInput(inputId = "wilderness", #name of input
                 label = "Wilderness:", #label displayed in ui
-                choices = unique(wilderness_data$wilderns), #calls list of available counties
+                choices = unique(sort(wilderness_data$wilderns)), #calls list of available counties
     )
   })
   
@@ -140,7 +140,7 @@ server <- function(input, output){
       ggplot(variable_data, aes(x=sci_22chklst))+
         geom_bar()+
         theme(axis.text.x = element_text(angle = 90))+
-        labs(x = "Lichen Species", title = "Histogram of Lichen Species within Selected Wilderness")
+        labs(x = "Lichen Species", title = paste0("Histogram of Lichen Species within ", wilderns))
         
       #})
       #plotOutput("plot1")
