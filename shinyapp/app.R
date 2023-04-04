@@ -8,13 +8,28 @@ library(htmlwidgets)
 
 #MAKE SURE YOUR CURRENT WORKING DIRECTORY IS shinyapp (the folder downloaded from github)
 
+googledownload <- function(id) {
+  read.csv(sprintf("https://docs.google.com/uc?id=%s&export=download", id), row.names=NULL, stringsAsFactors = F)
+}
+# data is being pulled from : https://drive.google.com/file/d/1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg/view?usp=share_link
+plot <- googledownload('1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg')
+#https://drive.google.com/file/d/1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl/view?usp=share_link
+lichen_1 <-googledownload('1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl')
+#https://drive.google.com/file/d/1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j/view?usp=share_link
+lichen_2 <-googledownload('1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j') 
+lichen_2 = lichen_2 %>% select(-row.names)
+lichen <- rbind(lichen_1, lichen_2)
+# data is being pulled from : https://drive.google.com/file/d/1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL/view?usp=share_link
+elemental <- googledownload('1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL')
+
 r_colors <- rgb(t(col2rgb(colors()) / 255))
 names(r_colors) <- colors()
 
 fulL_dataset <- read.csv("Long_Lat_Point_Data.csv") 
 
 #creating data table to match the lichen Species to the megadbid
-lichen_species_data <- read.csv("MegaDbLICHEN_2021.06.03v3.csv") %>% 
+#lichen_species_data <- read.csv("MegaDbLICHEN_2021.06.03v3.csv") %>% 
+lichen_species_data <- lichen %>% 
   select(c("megadbid", "scinamepkt")) %>% 
   distinct(megadbid, .keep_all = TRUE)
 
@@ -38,7 +53,8 @@ unique_longandlat$Lat<- as.numeric(unique_longandlat$Lat)
 unique_longandlat$Long <- as.numeric(unique_longandlat$Long)
 unique_longandlat$Year <- as.numeric(unique_longandlat$Year)
 
-elemental_data <- read.csv("MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F) %>%
+#elemental_data <- read.csv("MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F) %>%
+elemental_data <- elemental %>%
   select(c("ba_ppm", "al_ppm", "co_ppm", "megadbid"))
 
 elemental_data$ba_ppm <- as.integer(elemental_data$ba_ppm)
