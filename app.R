@@ -29,6 +29,7 @@ elemental_database <- googledownload('1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL')
 # lichen_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbLICHEN_2021.06.03V3.csv", stringsAsFactors = F) 
 # elemental_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
 
+
 wilderness_megadbid <- plot_database %>% select(megadbid, wilderns, area)
 
 
@@ -73,11 +74,11 @@ server <- function(input, output){
       data_active = lichen_database %>% 
         rename("reg_id" = nfs_reg)
     }else if(input$data == "Elemental"){
-      data_active = read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)#%>%
+      data_active = elemental_database #%>%
       #mutate(year=make_date(year=year))  
       
     }else if(input$data == "Plot"){
-      data_active = read.csv("~/Desktop/PWS465/shinyapp2/MegaDbPLOT_2022.10.06v2 minus FIA locale.csv", stringsAsFactors = F)%>% 
+      data_active = plot_databse %>% 
         rename("reg_id" = nfs_reg)
     } 
   })
@@ -106,7 +107,7 @@ server <- function(input, output){
     
     selectInput(inputId = "national_forest", #name of input
                 label = "National Forest:", #label displayed in ui
-                choices = unique(sort(forest_data$area)), #calls list of available counties
+                choices = unique(forest_data$area), #calls list of available counties
                 #selected = unique(data_available)[1]
     )
   })
@@ -116,7 +117,7 @@ server <- function(input, output){
     
     selectInput(inputId = "wilderness", #name of input
                 label = "Wilderness:", #label displayed in ui
-                choices = unique(sort(wilderness_data$wilderns)), #calls list of available counties
+                choices = unique(wilderness_data$wilderns), #calls list of available counties
     )
   })
   
@@ -127,45 +128,44 @@ server <- function(input, output){
     
     selectInput(inputId = "variable1", #name of input
                 label = "Select an Output:", #label displayed in ui
-                choices = choice_vector(), 
-                selected = "Histogram"
+                choices = choice_vector()
     )
   })
   
   output$elementalPlot = renderPlot({
     variable_data = data_available() %>% filter(wilderns == input$wilderness)
     if(input$data == "Lichen"){
-    if(input$variable1 == "Histogram"){
-      #output$plot1 <- renderPlot({
-      ggplot(variable_data, aes(x=sci_22chklst))+
-        geom_bar()+
-        theme(axis.text.x = element_text(angle = 90))+
-        labs(x = "Lichen Species", title = paste0("Histogram of Lichen Species within ", wilderns))
+      if(input$variable1 == "Histogram of Lichen Species"){
+        #output$plot1 <- renderPlot({
+        ggplot(variable_data, aes(x=sci_22chklst))+
+          geom_bar()+
+          theme(axis.text.x = element_text(angle = 90))+
+          labs(x = "Lichen Species", title = paste("Histogram of Lichen Species within", input$wilderness))
         
-      #})
-      #plotOutput("plot1")
-      
-    }
+        #})
+        #plotOutput("plot1")
+        
+      }
     }else if(input$data == "Elemental"){
       ggplot(variable_data, aes_string(x=input$variable1, y='year'))+
         geom_point()+
         theme_bw()+
         theme(axis.text.x = element_text(angle = 90))+
-        labs(x = "Element Concentration", title = "Histogram of Element Concentration")
+        labs(x = "Element Concentration", title = paste("Histogram of", input$variable1,"Concentration"))
       
     }else if(input$data == "Plot"){
       if(input$variable1 == "Sulfur Airscore"){
-        ggplot(variable_data, aes_string(x="plot", y='s_airscore'))+
+        ggplot(variable_data, aes(x=plot, y=s_airscore, fill="black"))+
           geom_col()+
-          theme_bw()+
-          theme(axis.text.x = element_text(angle = 90))+
-          labs(x = "Plot", y = "Sulfur Airscore", title = "Airscore across plots")
+          scale_fill_identity()+
+          theme(axis.text.x = element_text(angle = 90, size=15),axis.text.y = element_text(size=15),legend.text = element_text(size=15),axis.title = element_text(size =18), title=element_text(size=18, face="bold"))+
+          labs(x = "Lichen Sampling Plot", y = "Sulfur Airscore", title = paste("Airscore for Lichen Sampling Plots in", input$wilderness), fill ="Sulfur Airscore" )
       }else if(input$variable == "Nitrogen Airscore"){
         ggplot(variable_data, aes_string(x="plot", y='n_airscore'))+
           geom_col()+
-          theme_bw()+
+          scale_fill_manual(values = "black")+
           theme(axis.text.x = element_text(angle = 90))+
-          labs(x = "Plot", y = "Nitrogen Airscore", title = "Airscore across plots")
+          labs(x = "Lichen Sampling Plot", y = "Nitrogen Airscore", title = paste("Airscore for each Lichen Sampling Plot in", input$wilderness))
         
       }
     }
@@ -176,16 +176,16 @@ server <- function(input, output){
   })
   
   output$downloadPlot <- downloadHandler(
-   filename = 'plot.png',
-   content = function(file) {
-       ggsave(file, plot = "elementalPlot", device = "png")
-   }
+    filename = 'plot.png',
+    content = function(file) {
+      ggsave(file, plot = "elementalPlot", device = "png")
+    }
   )
   output$downloadData <- downloadHandler(
-  filename = 'dataset.csv',
-  content = function(file) {
-    write.csv(variable_data, file)
-  }
+    filename = 'dataset.csv',
+    content = function(file) {
+      write.csv(variable_data, file)
+    }
   )
   
 }
