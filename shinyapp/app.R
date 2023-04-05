@@ -18,7 +18,7 @@ plot <- googledownload('1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg')
 lichen_1 <-googledownload('1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl')
 #https://drive.google.com/file/d/1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j/view?usp=share_link
 #https://drive.google.com/file/d/1KfW2aSOggASVbaUKXDJbAM7QqDR3R6OT/view?usp=share_link
-lichen_2 <-googledownload('1KfW2aSOggASVbaUKXDJbAM7QqDR3R6OT/view?usp=share_link') 
+lichen_2 <-googledownload('1KfW2aSOggASVbaUKXDJbAM7QqDR3R6OT') 
 lichen_2 = lichen_2 %>% select(-row.names)
 lichen <- rbind(lichen_1, lichen_2)
 
