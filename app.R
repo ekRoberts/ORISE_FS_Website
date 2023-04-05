@@ -29,6 +29,7 @@ elemental_database <- googledownload('1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL')
 # lichen_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbLICHEN_2021.06.03V3.csv", stringsAsFactors = F) 
 # elemental_database <- read.csv("~/Desktop/PWS465/shinyapp2/MegaDbELEMENTAL_2021.05.30.csv", stringsAsFactors = F)
 
+
 wilderness_megadbid <- plot_database %>% select(megadbid, wilderns, area)
 
 
@@ -127,31 +128,30 @@ server <- function(input, output){
     
     selectInput(inputId = "variable1", #name of input
                 label = "Select an Output:", #label displayed in ui
-                choices = choice_vector(), 
-                selected = "Histogram"
+                choices = choice_vector()
     )
   })
   
   output$elementalPlot = renderPlot({
     variable_data = data_available() %>% filter(wilderns == input$wilderness)
     if(input$data == "Lichen"){
-    if(input$variable1 == "Histogram"){
-      #output$plot1 <- renderPlot({
-      ggplot(variable_data, aes(x=sci_22chklst))+
-        geom_bar()+
-        theme(axis.text.x = element_text(angle = 90))+
-        labs(x = "Lichen Species", title = "Histogram of Lichen Species within Selected Wilderness")
+      if(input$variable1 == "Histogram of Lichen Species"){
+        #output$plot1 <- renderPlot({
+        ggplot(variable_data, aes(x=sci_22chklst))+
+          geom_bar()+
+          theme(axis.text.x = element_text(angle = 90))+
+          labs(x = "Lichen Species", title = paste("Histogram of Lichen Species within", input$wilderness))
         
-      #})
-      #plotOutput("plot1")
-      
-    }
+        #})
+        #plotOutput("plot1")
+        
+      }
     }else if(input$data == "Elemental"){
       ggplot(variable_data, aes_string(x=input$variable1, y='year'))+
         geom_point()+
         theme_bw()+
         theme(axis.text.x = element_text(angle = 90))+
-        labs(x = "Element Concentration", title = "Histogram of Element Concentration")
+        labs(x = "Element Concentration", title = paste("Histogram of", input$variable1,"Concentration"))
       
     }else if(input$data == "Plot"){
       if(input$variable1 == "Sulfur Airscore"){
@@ -176,16 +176,16 @@ server <- function(input, output){
   })
   
   output$downloadPlot <- downloadHandler(
-   filename = 'plot.png',
-   content = function(file) {
-       ggsave(file, plot = "elementalPlot", device = "png")
-   }
+    filename = 'plot.png',
+    content = function(file) {
+      ggsave(file, plot = "elementalPlot", device = "png")
+    }
   )
   output$downloadData <- downloadHandler(
-  filename = 'dataset.csv',
-  content = function(file) {
-    write.csv(variable_data, file)
-  }
+    filename = 'dataset.csv',
+    content = function(file) {
+      write.csv(variable_data, file)
+    }
   )
   
 }
