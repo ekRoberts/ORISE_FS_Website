@@ -13,19 +13,24 @@ googledownload <- function(id) {
 }
 # data is being pulled from : https://drive.google.com/file/d/1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg/view?usp=share_link
 plot <- googledownload('1FTF8Qsl6Ix_V4NTLucC7AenTdGab9Ntg')
+
 #https://drive.google.com/file/d/1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl/view?usp=share_link
 lichen_1 <-googledownload('1Iy8R6xebI7NE_xLeDC_L7BCyI5tzbSXl')
 #https://drive.google.com/file/d/1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j/view?usp=share_link
 lichen_2 <-googledownload('1-yLi0zqVihX25FjiErTJE_CMkjQnkV_j') 
 lichen_2 = lichen_2 %>% select(-row.names)
 lichen <- rbind(lichen_1, lichen_2)
+
 # data is being pulled from : https://drive.google.com/file/d/1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL/view?usp=share_link
 elemental <- googledownload('1nb1x4Zl35V7m-ToWY1RKzuZKm6rY0uiL')
+
+# data is being pulled from : https://drive.google.com/file/d/18nf6IeXiw3bhKNUKxu4nMIxHxVOT4oOJ/view?usp=share_link
+long_lat <- googledownload('18nf6IeXiw3bhKNUKxu4nMIxHxVOT4oOJ')
 
 r_colors <- rgb(t(col2rgb(colors()) / 255))
 names(r_colors) <- colors()
 
-fulL_dataset <- read.csv("Long_Lat_Point_Data.csv") 
+fulL_dataset <- long_lat 
 
 #creating data table to match the lichen Species to the megadbid
 #lichen_species_data <- read.csv("MegaDbLICHEN_2021.06.03v3.csv") %>% 
@@ -36,7 +41,7 @@ lichen_species_data <- lichen %>%
 #Combine full_dataset with lichen_species_data.   LOOK AT LINES 79 & 80
 #combine_dataset <- 
 
-data_points <- read.csv("Long_Lat_Point_Data.csv") %>%
+data_points <- long_lat %>%
   select(c("latusedd", "longusedd", "year", "megadbid"))%>%
   na.omit()
 
