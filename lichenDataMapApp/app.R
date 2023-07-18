@@ -13,8 +13,7 @@ library(plotly)
 library(DBI)
 library(RSQLite)
 library(dplyr)
-
-
+library(plyr)
 
 setwd('~/Desktop/PWS465/shinyapp')
 
@@ -23,28 +22,21 @@ con <- dbConnect(RSQLite::SQLite(), 'lichenDatabase.db')
 lichen <- tbl(con, 'MegaDBLICHEN_2021')%>%
   collect()%>%
   as.data.frame() %>%
-  mutate(row_id = row_number())
+  dplyr::mutate(row_id = dplyr::row_number())
 
 plot <- tbl(con, "MegaDbPLOT_2022")%>%
   collect()%>%
   as.data.frame()%>%
-  mutate(row_id = row_number())
+  dplyr::mutate(row_id = dplyr::row_number())
 
 elemental <- tbl(con, "MegaDbELEMENT_noduplicateColumnscsv")%>%
   collect()%>%
   as.data.frame()%>%
-  mutate(row_id = row_number())
-
-easternElementalThresholds <- tbl(con, "easternElementalThresholds")%>%
-  collect()%>%
-  as.data.frame()
+  dplyr::mutate(row_id = dplyr::row_number())
   
 
-rownames(easternElementalThresholds) = easternElementalThresholds$field1
-
-easternElementalThresholds = easternElementalThresholds %>% select(-field1)
-
 dbDisconnect(con)
+
 
 
 elemental$al_ppm <- as.numeric(elemental$al_ppm)
@@ -81,13 +73,28 @@ elemental$s_pct_adj<- as.numeric(elemental$s_pct_adj)
 
 elemental$megadbid <- as.character(elemental$megadbid)
 
-marker_info <- plot %>% select(megadbid,area, wilderns, plot, latusedd, longusedd)
-marker_info_elemental <- plot %>% select(megadbid, nfs_reg, latusedd, longusedd)
-marker_info$megadbid <- as.character(marker_info$megadbid)
+lichen <- lichen %>% select(-lichcoll)
 lichen$megadbid <- as.character(lichen$megadbid)
-marker_info$latusedd<- as.numeric(marker_info$latusedd)
-marker_info$longusedd <- as.numeric(marker_info$longusedd)
-marker_info_elemental$megadbid <- as.character(marker_info_elemental$megadbid)
+
+plot$n_airscore <- as.numeric(plot$n_airscore)
+plot$n_airscore_clim_adj <- as.numeric(plot$n_airscore_clim_adj)
+plot$s_airscore <- as.numeric(plot$s_airscore)
+plot$s_airscore_clim_adj <- as.numeric(plot$s_airscore_clim_adj)
+plot$cmaq_n_3yroll <- as.numeric(plot$cmaq_n_3yroll)
+plot$cmaq_s_3yroll <- as.numeric(plot$cmaq_s_3yroll)
+plot$longuseNAD83<- as.numeric(plot$longuseNAD83)
+plot$longuseNAD83 <- as.numeric(plot$longuseNAD83)
+plot$megadbid <- as.character(plot$megadbid)
+plot$spprich_oligo <- as.numeric(plot$spprich_oligo)
+plot$spprich_s_sens <- as.numeric(plot$spprich_s_sens)
+plot$spprich_total <- as.numeric(plot$spprich_total)
+plot$spprich_epimac <- as.numeric(plot$spprich_epimac)
+plot$spprich_forage <- as.numeric(plot$spprich_forage)
+plot$spprich_cyano <- as.numeric(plot$spprich_cyano)
+
+marker_info <- plot %>% select(megadbid,lichcoll, area, wilderns, latuseNAD83, longuseNAD83, locale, fia_prot, eluseft, habitat, fia_hab, ubc_mat, ubc_map, cmaq_n_3yroll, cmaq_s_3yroll)
+marker_info_elemental <- plot %>% select(megadbid, latuseNAD83, longuseNAD83)
+marker_info$megadbid <- as.character(marker_info$megadbid)
 
 plot_database <- plot
 
@@ -125,7 +132,7 @@ ui <- fluidPage(
   uiOutput('airscore_plot_ui'),
   uiOutput('airscore_ui'),
   uiOutput('lichen_list_ui'),
-  uiOutput('datatable'),
+  checkboxInput("wantDataTable", "Show Data Table", FALSE),
   actionButton('resetSelection', "Reset Point Selection")
 ),
   # this renders the map on the page
@@ -136,8 +143,9 @@ ui <- fluidPage(
   #this puts the range slider on the page and gives it a max and a min
   #htmlOutput("filter_slider"),
   
-  tableOutput("dataTable"),
+  htmlOutput("descriptionText"),
   htmlOutput("dataPlot"),
+  
   htmlOutput("fullData"),
   )
   ## a download button that pdownloads the map from the page 
@@ -150,37 +158,35 @@ ui <- fluidPage(
 server <- function(input, output, session) {
 
   color_function <- function(element, lichen, currentData){
-    lichen_names = colnames(easternElementalThresholds)
     
     revised_lichen_name = gsub(" ", "", lichen)
-    
-    if(revised_lichen_name %in% lichen_names){
-      threshold = as.numeric(easternElementalThresholds[element, revised_lichen_name])
-      print(threshold)
-    }else{
-      threshold = 100
-    }
+  
+      vec = elemental_database %>% filter(sciname == input$lichen_selector) %>% select(element) %>% drop_na()%>% pull()
+      
+      threshold = quantile(vec, 0.9)
+      explanation = "This was determined using the 90% quartile of the filtered data"
     
     element_data = fData() %>% select(input$element_selector) %>%pull()
-    elemental_thresholds <-as.factor(ifelse(element_data <= (threshold*.9), 'green',
-                                            ifelse(element_data > (threshold*.9) & element_data < (threshold*1.1), 'yellow', 
+    elemental_thresholds <-as.factor(ifelse(element_data <= (threshold*.75), 'limegreen', ifelse(element_data > (threshold*.75) & element_data <= (threshold*.9), 'darkgreen',
+                                            ifelse(element_data > (threshold*.9) & element_data <= (threshold*1.1), 'yellow', 
                                                    ifelse(element_data > (threshold*1.1) & element_data < (threshold*2), 'red', 
-                                                         ifelse(element_data >= (threshold*2), 'magenta',"blue")))))
+                                                         ifelse(element_data >= (threshold*2), 'magenta',"blue"))))))
     return(elemental_thresholds)
   }
   
   small_sample_data <- reactive({
     if(input$data == "Lichen"){
-      lichen_database %>%
-        rename("reg_id" = nfs_reg)
+       lichen_database #%>%
+      #   rename("reg_id" = nfs_reg)
     }else if(input$data == "Elemental"){
       elemental_database #%>%
       #mutate(year=make_date(year=year))
 
     }else if(input$data == "Plot"){
-      plot_database %>%
-        rename("reg_id" = nfs_reg)
+      plot_database #%>%
+        #rename("reg_id" = nfs_reg)
     }
+    
    })
   
 observe({
@@ -205,11 +211,11 @@ observe({
       }
 
     if(input$data == "Elemental" & (input$national_forest_selector != "No Selection" | input$wilderness != "No Selection" )){
-      print("This is the lichen selector")
+      #print("This is the lichen selector")
       lichen = small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector)%>% select(sciname) %>% unique() %>% as.vector()
       updateSelectizeInput(session, 'lichen_selector', choices = c("No Selection",lichen),server = TRUE)
-    }else if(input$national_forest_selector == "No Selection" & input$wilderness == "No Selection"){
-      print("Do we come here?")
+    }else if(input$data == "Elemental" & input$national_forest_selector == "No Selection" & input$wilderness == "No Selection"){
+      #print("Do we come here?")
       lichen = small_sample_data() %>% select(sciname) %>% unique() %>% as.vector()
       updateSelectizeInput(session, 'lichen_selector', choices = c("No Selection",lichen),server = TRUE)
     }
@@ -218,6 +224,7 @@ observe({
   
   round_choices <- reactive({
     #print("We are in the round choice observe")
+    if(input$data == "Elemental"){
       if(!is.null(input$lichen_selector)){
         if(input$lichen_selector != "No Selection" & input$national_forest_selector == "No Selection" & input$wilderness == "No Selection"){
           updateCheckboxGroupInput(session, "roundYear", choices = as.vector(small_sample_data() %>% filter(small_sample_data()$sciname == input$lichen_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique()), selected = as.vector(small_sample_data()%>%filter(small_sample_data()$sciname == input$lichen_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique()))
@@ -239,37 +246,50 @@ observe({
         as.vector(small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique())
         
       }
+    }else if(input$wilderness != "No Selection"){
+      updateCheckboxGroupInput(session, "roundYear", choices = as.vector(small_sample_data() %>% filter(small_sample_data()$wilderns == input$wilderness) %>%select(roundno)%>%pull()%>%sort()%>%unique()), selected = as.vector(small_sample_data()%>%filter(small_sample_data()$wilderns == input$wilderness) %>%select(roundno)%>%pull()%>%sort()%>%unique()))
+      as.vector(small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique())
+      
+    }else{
+      #print("We are in the round choice else statement")
+      updateCheckboxGroupInput(session, "roundYear", choices = as.vector(small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique()), selected = as.vector(small_sample_data()%>%filter(small_sample_data()$area == input$national_forest_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique()))
+      as.vector(small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector) %>%select(roundno)%>%pull()%>%sort()%>%unique())
+      
+    }
+
 
   })
 
 
   fData <- reactive({
     if(is.null(input$roundYear)){
-      #print("This is the null input filter")
-      #print(input$roundYear)
-      #print(round_choices())
-      data_to_send = small_sample_data() %>% filter(small_sample_data() $roundno %in% round_choices())
+      print("This is the null input filter")
+      print(input$roundYear)
+      print(round_choices())
+      data_to_send = small_sample_data() %>% filter(!small_sample_data()$roundno %in% round_choices())
       data_to_send
     }else{
-      #print('This is where the rounds are filtered')
+      print('This is where the rounds are filtered')
       exclude = setdiff(round_choices(), input$roundYear)
       if(length(exclude) != 0){
-        #print("Exclude does not equal 0")
-        #print(input$roundYear)
+        print("Exclude does not equal 0")
+        print(input$roundYear)
         data_to_send = small_sample_data()  %>% filter(!small_sample_data() $roundno %in% exclude)
         data_to_send
       }else{
-        #print("Exclude DOES equal 0")
-        #print(input$roundYear)
+        print("Exclude DOES equal 0")
+        print(input$roundYear)
         data_to_send =small_sample_data()  %>% filter(small_sample_data() $roundno %in% input$roundYear)
         data_to_send
       }
     }
     
     #print("a lichen is being selected")
+    if(input$data == "Elemental"){
     if(!is.null(input$lichen_selector)){
+      #print("in Null selector")
       if(input$lichen_selector != "No Selection"){
-        #print("in Null selector")
+        #print("a lichen is being selected")
         if(input$wilderness == "No Selection" & input$national_forest_selector == "No Selection" ){
           data_to_send = data_to_send %>% filter(data_to_send$sciname == input$lichen_selector)
           data_to_send
@@ -300,22 +320,73 @@ observe({
         data_to_send
       }
     }
+      if(!is.null(input$element_selector)){
+        if(input$element_selector != "No Selection"){
+          data_to_send %>% drop_na(input$element_selector)
+        }else{
+          data_to_send
+        }
+      }else{
+        data_to_send
+      }
+      }else{
+        #print("We are in the else for the elemental selector")
+      if(input$wilderness != "No Selection"){
+        #print("we are in the second wilderness if statement")
+        data_to_send = data_to_send %>% filter(data_to_send$wilderns == input$wilderness) 
+        data_to_send
+      }else{
+        data_to_send = data_to_send %>% filter(data_to_send$area == input$national_forest_selector) 
+        data_to_send
+      }
+    }
+    
+
+
       })
   
   
   current_species <- reactive({
-    if(input$wilderness != "No Selection"){
-          small_sample_data() %>% filter(small_sample_data()$wilderns == input$wilderness) %>% select(sciname) %>% pull() %>% unique() %>% as.vector() %>% sort()
-    }else{
-      small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector) %>% select(sciname) %>% pull() %>% unique() %>% as.vector() %>% sort()
+    if(input$data == "Elemental"){
+      #print("we shouldn't be here")
+      if(input$wilderness != "No Selection"){
+        small_sample_data() %>% filter(small_sample_data()$wilderns == input$wilderness) %>% select(sciname) %>% pull() %>% unique() %>% as.vector() %>% sort()
+      }else{
+        small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector) %>% select(sciname) %>% pull() %>% unique() %>% as.vector() %>% sort()
+      }
     }
-    
   })
   
   observeEvent(input$resetSelection,{
-    output$dataPlot <- renderUI({
-      return(NULL)
-    })
+    if(input$data == "Elemental"){
+      output$dataPlot <- renderUI({
+        renderPlotly({
+          element_plot_reactive()
+        })
+        
+      })
+      
+    }else if(input$data == "Lichen"){
+      output$dataPlot <-renderUI({
+        
+        current_year_round <- currentPlotData() %>% select(roundno) %>% pull()%>%unique()%>%as.vector()
+        lichen_lists = c()
+        
+        for(round in current_year_round){
+          lichen_lists = c(lichen_lists, currentPlotData() %>% filter(roundno == round)%>%pull(sci_22chklst)%>%unique()%>%as.vector())
+        }
+        lichen_lists_ordered = sort(as.vector(unique(lichen_lists)))
+        HTML(paste('', lichen_lists_ordered, sep='<br/>'))
+      })
+    }else if(input$data == "Plot"){
+      output$dataPlot <- renderUI({
+        renderPlotly({
+          airscore_plot_reactive()
+        })
+        
+      })
+    }
+
   })
   
   filteredData <- SharedData$new(fData)
@@ -328,21 +399,51 @@ observe({
       if(input$element_selector == "No Selection"){
         fillColor = "purple"
       }else{
+        #print(str(filteredData$data()))
         fillColor = color_function(input$element_selector, input$lichen_selector, filteredData$data())
-
+        #print(fillColor)
         leafletProxy("mymap", data = filteredData)%>%
-              addLegend('bottomleft', colors = c("green", "yellow", "red", "magenta", "blue") , labels=c("<90% of threshold", "Between 90% and 110% of threshold","Between 110% and 200% of threshold", ">200% of threshold", "NA") ,
+              addLegend('bottomleft', colors = c("limegreen", 'darkgreen',"yellow", "red", "magenta", "blue") , labels=c("<75% of threshold", "Between 75% and 90% of threshold", "Between 90% and 110% of threshold","Between 110% and 200% of threshold", ">200% of threshold", "NA") ,
                         title = 'Color Gradient for Aluminium (parts per million)',
                         opacity = 1)
       }
       }
     }else if(input$data == "Plot"){
-      if(length(input$plot_type) != 0 & length(input$airscore_value) != 0){
-          fillColor = ~ ifelse(input$airscore_value > 7 & input$airscore_value < 4, "red", "green")
-          # leafletProxy("mymap", data = filteredData)%>%
-          #   addLegend('bottomleft', pal = get(paste0(input$element_selector,"_color"))  ,values = as.formula(paste0('~',input$element_selector,'_factor')) ,
-          #             title = 'Color Gradient for Aluminium (parts per million)',
-          #             opacity = 1)
+      if(length(input$plot_type) != 0 & length(input$airscore_value) != 0 & input$national_forest_selector != "No Selection"){
+        
+        if(input$airscore_value == 'cmaq_n_3yroll'){
+          current_max = plyr::round_any(max(plot_database$cmaq_n_3yroll, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'n_airscore_clim_adj'){
+          current_max = plyr::round_any(max(plot_database$n_airscore_clim_adj, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'spprich_oligo'){
+          current_max = plyr::round_any(max(plot_database$spprich_oligo, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'cmaq_s_3yroll'){
+          current_max = plyr::round_any(max(plot_database$cmaq_s_3yroll, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 's_airscore_clim_adj'){
+          current_max = plyr::round_any(max(plot_database$s_airscore_clim_adj, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'spprich_total'){
+          current_max = plyr::round_any(max(plot_database$spprich_total, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'spprich_epimac'){
+          current_max = plyr::round_any(max(plot_database$spprich_epimac, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'spprich_forage'){
+          current_max = plyr::round_any(max(plot_database$spprich_forage, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'spprich_cyano'){
+          current_max = plyr::round_any(max(plot_database$spprich_cyano, na.rm = T), 10, f=ceiling)
+        }else if(input$airscore_value == 'spprich_s_sens'){
+          current_max = plyr::round_any(max(plot_database$spprich_s_sens, na.rm = T), 10, f=ceiling)
+        }
+        
+        pal <- colorNumeric(
+          palette = "OrRd",
+          domain = 0:current_max)
+
+        fillColor = ~pal(plot_database %>% select(input$airscore_value)%>%drop_na()%>%pull())
+
+        leafletProxy("mymap", data = filteredData)%>%
+          addLegend("bottomright", pal = pal, values = 0:current_max,
+                    title = "Color Gradient for Airscore Value",
+                    opacity = 1
+          )
         }
     }else{
       fillColor = "purple"
@@ -354,7 +455,7 @@ observe({
       addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE), group = "Basic Map") %>%
       addProviderTiles(providers$Esri.WorldImagery, options = providerTileOptions(noWrap = TRUE), group = "Topographical")%>%
       addProviderTiles(providers$Esri.WorldTopoMap, options = providerTileOptions(noWrap = TRUE), group = "Lined Topographical")%>%
-      addCircleMarkers(~longusedd, ~latusedd, radius = 5,stroke=FALSE,fillOpacity = 1, fillColor = fillColor, layerId = ~row_id, popup = (paste("Year Sampled: ",fData()$year ,"<br>","Lichen Species: ",fData()$sciname, "<br>", "National Forest: ",fData()$area, "<br>", "Wilderness: ",fData()$wilderns, "<br>","State: ",fData()$state, "<br>", "County: ",fData()$county, "<br>","Plot Type: ", fData()$dataset2,"<br>","Plot: ",fData()$plot, "<br>","Megadbid: ", fData()$megadbid))) %>% #, color = ~circleMarkerOutline(ba_ppm_factor), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm_factor), fillOpacity = ~factop(ba_ppm_factor), group = "Barium")%>%
+      addCircleMarkers(~longuseNAD83, ~latuseNAD83, radius = 5,stroke=FALSE,fillOpacity = 1, color = fillColor, layerId = ~row_id, popup = (paste("Year Sampled: ",fData()$year ,"<br>","Lichen Species: ", "<br>", "National Forest: ",fData()$area, "<br>", "Wilderness: ",fData()$wilderns, "<br>","State: ",fData()$state, "<br>", "County: ",fData()$county, "<br>","Plot Type: ", fData()$dataset2,"<br>","Plot: ",fData()$plot, "<br>","Megadbid: ", fData()$megadbid))) %>% #, color = ~circleMarkerOutline(ba_ppm_factor), stroke = T, weight = 0.4, fillColor = ~ba_ppm_color(ba_ppm_factor), fillOpacity = ~factop(ba_ppm_factor), group = "Barium")%>%
       addLayersControl(
       baseGroups = c("Lined Topographical", "Topographical","Basic Map"),
       options = layersControlOptions(collapsed = FALSE) )
@@ -372,12 +473,15 @@ observe({
       output$plot_ui <-renderUI({
         return(NULL)
       })
+      output$descriptionText <-renderUI({
+        return(NULL)
+      })
     }else if(input$data == "Elemental"){
       #selectizeInput(label = "Indicator Lichen Species", inputId = 'lichen_selector', choices = c("No Selection",as.vector(unique(small_sample_data()$sciname))))
       #print("was this updated?")
       
       if(input$wilderness == "No Selection" & input$national_forest_selector == "No Selection"){
-        print("are we getting past the fData if")
+        #print("are we getting past the fData if")
         output$lichen_ui <- renderUI(
           selectizeInput(label = "Indicator Lichen Species", inputId = 'lichen_selector', choices = c("No Selection",sort(as.vector(unique(small_sample_data()$sciname))))),
           )
@@ -393,7 +497,7 @@ observe({
 
       )
       output$plot_ui <-renderUI(
-        selectInput("plot_type", "Plot Type", choices = c("Scatter Plot"="scatter", "Box Plot" = "box", "Histogram"="histogram", "Box Plot (whole selection area)" = 'whole box plot', "Data Table" = "data table"))
+        selectInput("plot_type", "Plot Type", choices = c("Scatter Plot"="scatter", "Box Plot" = "box", "Histogram"="histogram", "Box Plot (whole selection area)" = 'whole box plot'))
       )
     }
     if(input$data != "Plot"){
@@ -406,11 +510,11 @@ observe({
     }else if(input$data == "Plot"){
       output$airscore_ui <-renderUI(
         #selector = "#placeholder",
-        selectInput("airscore_value", "Airscore Value", choices = c("Nitrogen (Climate Adjusted)"="n_airscore_clim_adj", "Sulfur (Climate Adjusted)" = "s_airscore_clim_adj"))
+        selectInput("airscore_value", "Airscore Value", choices = c("Nitrogen Airscore (Climate Adjusted)"="n_airscore_clim_adj", "Nitrogen Airscore"="n_airscore","Sulfur Airscore (Climate Adjusted)" = "s_airscore_clim_adj", "Sulfur Airscore" = "s_airscore","Nitrogen Deposition" = 'cmaq_n_3yroll', "Sulfur Deposition" = 'cmaq_s_3yroll', "Oligptroph Species Richness" = "spprich_oligo", 'Sensitive Species Richness' = 'spprich_s_sens', "Total Species Richness" = 'spprich_total', 'Epiphytic Macro Lichen Richness'='spprich_epimac', 'Forage Lichen Richness'='spprich_forage','Cyano Lichen Richness'='spprich_cyano'))
       )
       output$airscore_plot_ui <-renderUI(
         #selector = "#placeholder",
-        selectInput("plot_type", "Plot Type", choices = c("Scatter Plot"="scatter", "Box Plot" = "box", "Histogram"="histogram", "Box Plot (whole selection area)" = 'whole box plot', "Data Table" = "data table"))
+        selectInput("plot_type", "Plot Type", choices = c("Scatter Plot"="scatter", "Box Plot" = "box", "Histogram"="histogram", "Box Plot (whole selection area)" = 'whole box plot'))
       )
     }
     if(input$data != "Lichen"){
@@ -420,11 +524,8 @@ observe({
     }else if(input$data == "Lichen"){
       output$lichen_list_ui <-renderUI(
         #selector = "#placeholder",
-        selectInput("lichen_type", "Select Lichen Type", choices = c("All Lichen", "Pollution Sensitive Lichen"))
+        selectInput("lichen_type", "Select Lichen Type", choices = c("All Lichen"))
       )
-      output$datatable <-renderUI(
-        checkboxInput("wantDataTable", "Show Data Table", FALSE)
-            )
     }
   })
      
@@ -443,21 +544,33 @@ observe({
   
   element_plot_reactive <- reactive({
     
-    lichen_names = colnames(easternElementalThresholds)
+    if(input$data == "Elemental"){
     
     revised_lichen_name = gsub(" ", "", input$lichen_selector)
     
-    if(revised_lichen_name %in% lichen_names){
-      threshold = as.numeric(easternElementalThresholds[input$element_selector, revised_lichen_name])
-      print(threshold)
-    }else{
-      threshold = 100
-    }
+    element_data = currentPlotData() %>% select(input$element_selector) %>% drop_na() %>% pull()
     
-    element_data = currentPlotData() %>% select(input$element_selector) %>%pull()
-    #print(values$current_megadbid)
-    data_for_plot = currentPlotData() %>% mutate(Color = ifelse(element_data<= (threshold*.9), 'green', ifelse(element_data  > (threshold*.9) & element_data < (threshold*1.1), 'yellow', ifelse(element_data> (threshold*1.1) & element_data < (threshold*2), 'red', ifelse(element_data>= (threshold*2), 'magenta',"blue")))))
+    vec = elemental_database %>% filter(sciname == input$lichen_selector) %>% select(input$element_selector) %>% drop_na() %>% pull()
+    
+    threshold = quantile(vec, 0.9)
+    explanation = "This was determined through using the 90% quartile of the filtered data"
+    
+    output$descriptionText <- renderUI({
+      renderText({
+        paste("The current threshold being using is", round(threshold, 2),' ppm.',explanation)
+        
+      })
+    })
 
+    
+
+    data_for_plot = currentPlotData() %>% mutate(Color = ifelse(element_data <= (threshold*.75), 'green', ifelse(element_data > (threshold*.75) & element_data <= (threshold*.9), 'darkgreen',
+                                                                                                                 ifelse(element_data > (threshold*.9) & element_data <= (threshold*1.1), 'yellow', 
+                                                                                                                       ifelse(element_data > (threshold*1.1) & element_data < (threshold*2), 'red', 
+                                                                                                                               ifelse(element_data >= (threshold*2), 'magenta',"blue"))))))
+
+    
+    if(nrow(currentPlotData()) != 0){
     if(input$plot_type == "box"){
       first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$element_selector]], x=plotno))+
         geom_boxplot()+
@@ -468,6 +581,7 @@ observe({
       ggplotly(first_plot,height = 500, width = 1500)%>% add_trace(hoverinfo = 'plotno')
      
     }else if(input$plot_type == "scatter"){
+
       first_plot <- ggplot(data_for_plot, aes(y = .data[[input$element_selector]], x=plotno, color = Color))+
         scale_color_identity()+
         geom_jitter()+
@@ -479,9 +593,9 @@ observe({
     }else if(input$plot_type == "histogram"){
       #elemental <- currentPlotData() %>% filter(input$element_selector != 0)
       element <- currentPlotData() %>% select(input$element_selector) %>% unlist() %>% unname()
-      print(str(element))
-      print(mean(element, na.rm = T))
-      print(sd(element, na.rm = T))
+      #print(str(element))
+      #print(mean(element, na.rm = T))
+      #print(sd(element, na.rm = T))
       first_plot <- ggplot(currentPlotData(), aes(x = .data[[input$element_selector]]))+
         geom_histogram(aes(y = ..density..))+
         facet_wrap(~roundno, nrow = length(input$roundYear), scales = "free")+
@@ -510,12 +624,13 @@ observe({
         ggplotly(first_plot,height = 500, width = 600)
       }
     }
-
+    }
+}
   })
   
   airscore_plot_reactive <- reactive({
     if(input$plot_type == "box"){
-      first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x='plot'))+
+      first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x=plot))+
         geom_boxplot()+
         #geom_jitter(color="black", size=0.4, alpha=0.9) +
         facet_wrap(~roundno, nrow = length(input$roundYear), scales = "free")+
@@ -525,12 +640,17 @@ observe({
       ggplotly(first_plot,height = 500, width = 1500)
       
     }else if(input$plot_type == "scatter"){
-      first_plot <- ggplot(subset(currentPlotData(),!is.na(input$airscore_value)), aes(y = .data[[input$airscore_value]], x='plot'))+
+      pal <- colorNumeric(
+        palette = "Blues",
+        domain = fData() %>% select(input$airscore_value)%>%pull())
+      
+      fillColor = ~pal(fData() %>% select(input$airscore_value)%>%pull())
+      
+      first_plot <- ggplot(subset(currentPlotData(),!is.na(input$airscore_value)), aes(y = .data[[input$airscore_value]], x=plot))+
         geom_jitter(width = 0.15)+
-        #geom_jitter(color="black", size=0.4, alpha=0.9) +
+        scale_colour_gradient(low = "purple", high = "green")+
         facet_wrap(~roundno, nrow = length(input$roundYear), scales = "free")+
         theme_bw()+
-        geom_hline(yintercept=7, color = "red")+
         theme(axis.text.x = element_text(angle = 90, size = 10), axis.text.y = element_text(size = 10))+
         labs(x = "Survey Plot", title = paste("Scatter Plot of", input$airscore_value))
       ggplotly(first_plot,height = 500, width = 1500)%>% add_trace(hoverinfo = 'plot')
@@ -545,7 +665,7 @@ observe({
       ggplotly(first_plot,height = 500, width = 1500)
     }else if(input$plot_type == "whole box plot"){
       if(input$national_forest_selector != "No Selection" & input$wilderness == "No Selection"){
-        first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x='area'))+
+        first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x=area))+
           geom_boxplot()+
           #geom_jitter(color="black", size=0.4, alpha=0.9) +
           facet_wrap(~roundno, ncol = length(input$roundYear), scales = "free")+
@@ -554,7 +674,7 @@ observe({
           labs(x = "Survey Plot")
         ggplotly(first_plot,height = 500, width = 1500)
       }else{
-        first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x='wilderns'))+
+        first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x=wilderns))+
           geom_boxplot()+
           #geom_jitter(color="black", size=0.4, alpha=0.9) +
           facet_wrap(~roundno, ncol = length(input$roundYear), scales = "free")+
@@ -569,14 +689,6 @@ observe({
   observe({
       if(input$data == "Elemental"){
         if(length(input$plot_type) != 0 & length(input$element_selector) != 0 & length(input$lichen_selector) != 0){
-          if(input$plot_type == "data table"){
-            output$dataPlot <-  renderUI({ DT::renderDataTable({
-              toDataTable <- currentPlotData()%>% select(sciname, input$element_selector, area, wilderns, county, state, plot, year)
-              datatable(toDataTable)
-            }, server = FALSE)
-            })
-          }
-          
           
           if(input$element_selector == "No Selection"){
             output$dataPlot <- renderUI({
@@ -586,27 +698,41 @@ observe({
               })
             })
           }else{
-            if(input$plot_type == "data table"){
-              output$dataPlot <- renderUI({ DT::renderDataTable({
-                toDataTable <- currentPlotData()%>% select(sciname, input$element_selector, area, wilderns, county, state, plot, year)
-                datatable(toDataTable)
-              }, server = FALSE)
-              })
-            }else{
+            if(nrow(currentPlotData()) != 0){
               output$dataPlot <-renderUI({
                 renderPlotly({
                   element_plot_reactive()
                   
                 })
               })
+            }else{
+              output$dataPlot <- renderUI({
+                renderText({
+                  "Your current selection does not have any observations, please revise your selection to see a plot."
+                  
+                })
+              })
             }
+
             
+          }
+          if(input$wantDataTable){
+            output$fullData <- renderUI({ DT::renderDataTable({
+              toDataTable <- currentPlotData()%>% select(sciname, input$element_selector, area, wilderns, county, state, plotno, year)
+              datatable(toDataTable)
+            }, server = FALSE)
+            })
+          }else{
+            output$fullData <- renderUI({
+              return(NULL)
+            })
           }
           
         }
       }
     if(input$data == "Plot"){
       if(input$national_forest_selector == "No Selection"){
+       #print("are we getting here?")
         output$dataPlot <- renderUI({
           renderText({
             "Select a National Forest to produce a plot"
@@ -614,13 +740,7 @@ observe({
           })
         })
       }else if(length(input$plot_type) != 0 & length(input$airscore_value) != 0){
-      if(input$plot_type == "data table"){
-          output$dataPlot <- renderUI({ DT::renderDataTable({
-            toDataTable <- currentPlotData()%>% select(sciname, input$airscore_value, area, wilderns, county, state, plot, year)
-            datatable(toDataTable)
-          }, server = FALSE)
-          })
-      }else{
+        #print("this is where we call the plot reactive")
         output$dataPlot <-renderUI({
           renderPlotly({
             airscore_plot_reactive()
@@ -628,6 +748,17 @@ observe({
           })
         })
       }
+      
+      if(input$wantDataTable){
+        output$fullData <- renderUI({ DT::renderDataTable({
+          toDataTable <- currentPlotData()%>% select(megadbid, plot_use, year, date, state, county, area, wilderns, locale, latuseNAD83, longuseNAD83, eluseft, ecoreg1, ecoreg3, ecoreg_4, habitat, fia_hab, ubc_mat, ubc_map, ubc_cmd, cmaq_s_3yroll, n_lich_kghay, n_airscore_clim_adj, spprich_eut, spprich_oligo, cmaq_s_3yroll, s_airscore_clim_adj, spprich_s_sens, spprich_s_tol, spprich_total, spprich_epimac, spprich_forage, spprich_cyano)
+          datatable(toDataTable)
+        }, server = FALSE)
+        })
+      }else{
+        output$fullData <- renderUI({
+          return(NULL)
+        })
       }
     }
     
@@ -648,7 +779,7 @@ observe({
         
         if(input$wantDataTable){
           output$fullData <- renderUI({ DT::renderDataTable({
-            toDataTable <- currentPlotData()%>% select(commonname, sci_22chklst, growthform,auth_22,n_class,s_class,year,plot,area, wilderns, county, state,  )
+            toDataTable <- currentPlotData()%>% select(megadbid, year, plot_use, state, county, substrat, fia_abun, chemtest, matchem, lichcoll, collno, detmd,ddate, herb, accessno, proj_code, growthform, sci_22chklst, auth_22, commonname, family, fxlgp, n_class, s_class, s_critload, consrv_stat)
             datatable(toDataTable)
           }, server = FALSE)
           })
@@ -665,13 +796,11 @@ observe({
   
   single_element_plot_reactive <- reactive({
     
-    lichen_names = colnames(easternElementalThresholds)
-    
     revised_lichen_name = gsub(" ", "", input$lichen_selector)
     
     if(revised_lichen_name %in% lichen_names){
       threshold = as.numeric(easternElementalThresholds[input$element_selector, revised_lichen_name])
-      print(threshold)
+      #print(threshold)
     }else{
       threshold = 100
     }
