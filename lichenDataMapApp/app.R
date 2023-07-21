@@ -14,6 +14,8 @@ library(DBI)
 library(RSQLite)
 library(dplyr)
 
+
+#This creates the connection with the SQLite database and allows us to pull out the 3 main tables
 con <- dbConnect(RSQLite::SQLite(), 'lichenDatabase.db')
 
 lichen <- tbl(con, 'MegaDBLICHEN_2021')%>%
@@ -32,10 +34,13 @@ elemental <- tbl(con, "MegaDbELEMENT_noduplicateColumnscsv")%>%
   dplyr::mutate(row_id = dplyr::row_number())
   
 
+#This disconnects us from the database after we have pulled our info
 dbDisconnect(con)
 
 
 
+#When the data is pulled from the database some of the columns are not stored as numeric.
+#For graphing purposes the columns need to be coereced to a numerical form
 elemental$al_ppm <- as.numeric(elemental$al_ppm)
 elemental$b_ppm <- as.numeric(elemental$b_ppm)
 elemental$ba_ppm <- as.numeric(elemental$ba_ppm)
@@ -67,10 +72,11 @@ elemental$zn_ppm <- as.numeric(elemental$zn_ppm)
 elemental$no3n_ppm <- as.numeric(elemental$no3n_ppm)
 elemental$n_pct_adj<- as.numeric(elemental$n_pct_adj)
 elemental$s_pct_adj<- as.numeric(elemental$s_pct_adj)
-
+#This is so the columns from the different databases can be joined
 elemental$megadbid <- as.character(elemental$megadbid)
 
 lichen <- lichen %>% select(-lichcoll)
+#This is so the columns from the different databases can be joined
 lichen$megadbid <- as.character(lichen$megadbid)
 
 plot$n_airscore <- as.numeric(plot$n_airscore)
@@ -89,10 +95,13 @@ plot$spprich_epimac <- as.numeric(plot$spprich_epimac)
 plot$spprich_forage <- as.numeric(plot$spprich_forage)
 plot$spprich_cyano <- as.numeric(plot$spprich_cyano)
 
+#These dataframes are to add information from the plot dataframe to the other two dataframes for mapping and visulization purposes 
 marker_info <- plot %>% select(megadbid,lichcoll, area, wilderns, latuseNAD83, longuseNAD83, locale, fia_prot, eluseft, habitat, fia_hab, ubc_mat, ubc_map, cmaq_n_3yroll, cmaq_s_3yroll)
 marker_info_elemental <- plot %>% select(megadbid, latuseNAD83, longuseNAD83)
 marker_info$megadbid <- as.character(marker_info$megadbid)
 
+
+#create the three main dataframes
 plot_database <- plot
 
 lichen_database <- left_join(lichen, marker_info,  by='megadbid')
@@ -103,49 +112,59 @@ elemental_database <- left_join(elemental, marker_info_elemental,  by='megadbid'
 # this controls the front end of the app - how you would add new elements
 ui <- fluidPage(
   
+  #Makes the title in the shiny app
   titlePanel("Lichen Data Query and Mapping Tool"),
   
-  tags$style(type = "text/css", "
-             .irs-slider {width: 30px; height: 30px; top: 22px;}
-             .irs-grid-text {font-size: 20px}
-             .irs--shiny .irs-to, .irs--shiny .irs-from, .irs--shiny .irs-single{ font-size: 17px; color: black; background: transparent}"),
+  #This is where all of the selection boxes are housed
   sidebarPanel(
   
-  #sliderInput("range", "Year", min(small_sample_data()$year, na.rm = T), max(small_sample_data()$year, na.rm = T), value = range(small_sample_data()$year,  na.rm = T), step = 1, sep = "", width = "100%"),
-  radioButtons("data", #name of input
-               label = "Data:", #label displayed in ui
+  #These radio buttons allow users to select the dataframe they want to work with
+  radioButtons("data", #this is the name you will use to access the current input ex: input$data
+               label = "Data:", #name that appears above the radio buttons
                choices = c( "Elemental","Lichen", "Plot"),
-               # calls unique values from the State column in the previously created table
   ),
-  #selectizeInput(label = "Region", inputId = 'region_selector', choices = c('No Selection','Northern Region' = "1", 'Rocky Mountain Region' = '2', 'Southwestern Region' = '3', 'Intermountain Region' = '4', 'Pacific Southwest Region' = '5', 'Pacific Northwest Region' = '6', 'Southern Region' = '8', 'Eastern Region' = '9', 'Alaska'='10')),
+  
+  #Create the National Forest and Wilderness selectors- these are populated in the server because they change based on user input
   selectizeInput(label = "National Forest", inputId = 'national_forest_selector', choices = NULL),
-  #htmlOutput("wilderness_selector"),
   selectizeInput(label = "Wilderness", inputId = 'wilderness', choices = c("No Selection")),  
-  #htmlOutput('elemental_selector'),
+
+  #This check box group changes dynamically in the server based on the round years from the user selected data
   checkboxGroupInput(
     inputId='roundYear',
     label="Select the Round Years"
   ),
+  
+  #Based on the dataframe selected by the user different selection options are made available for the user
+  #THese are placeholders for those selectors which are populated in the server.
   uiOutput('lichen_ui'),
   uiOutput("elemental_ui"),
   uiOutput('plot_ui'),
   uiOutput('airscore_plot_ui'),
   uiOutput('airscore_ui'),
   uiOutput('lichen_list_ui'),
+  
+  #This turns on and off the display of the data table 
   checkboxInput("wantDataTable", "Show Data Table", TRUE),
+  
+  #This resets the graphing tool after a single point has been selected
   actionButton('resetSelection', "Reset Point Selection"),
   
+  #This allows the user to download the current data selection
   downloadButton("downloadData", "Download Data Selection")
 ),
-  # this renders the map on the page
-  #'Aluminum', 'Boron', 'Barium','Beryllium','Bromine','Calcium','Cadmium','Cobalt','Chromium','Copper','Fluorine','Iron','Mercury','Potassium','Lithium','Magnesium','Manganese','Molybdenum','Sodium','Nickel','Phosphorus','Lead','Rubidium','Silicon','Tin','Strontium','Titanium','Vanadium','Zinc','Nitrogen'
+
+#Panel where the map, graph, and datatable are output
   mainPanel(
+  #map output  
   leafletOutput("mymap"),
   p(),
-  
+
   htmlOutput("descriptionText"),  tags$head(tags$style("#descriptionText{color: red; font-size: 18px; font-style: bold;}")),
+  #graph output
   htmlOutput("dataPlot"),
+  #creates space between the graph and datatable
   htmlOutput("spacer"), tags$head(tags$style("#spacer{color: white; font-size: 45px; font-style: bold;}")),
+  #data table output
   htmlOutput("fullData"),
   )
   
@@ -155,20 +174,23 @@ ui <- fluidPage(
 # the server function controls the backend of the app
 server <- function(input, output, session) {
   
+  #Populates the htmlOuptut("spacer) with white text to create a space 
   output$spacer <- renderText({
       "This is a spacer to try and keep my table from my graph"
     })
 
+  #Function that is called by the map when the element dataframe is being used to populate the colors for the thresholds
   color_function <- function(element, lichen, currentData){
-    
-    revised_lichen_name = gsub(" ", "", lichen)
   
+    #Vector pulls out the current lichen species and element selected by the user from the elemental database 
       vec = elemental_database %>% filter(sciname == input$lichen_selector) %>% select(element) %>% drop_na()%>% pull()
       
+      #Takes the 90% quantile of the pervious vector to use as the threshold
       threshold = quantile(vec, 0.9)
-      explanation = "This was determined using the 90% quartile of the filtered data"
     
+    #it is difficult to use the input$element_selector call to index a database so it is easiest to use the select method
     element_data = fData() %>% select(input$element_selector) %>%pull()
+    #the data above goes through the series of if else statements to assign a point color based on the given threshold
     elemental_thresholds <-as.factor(ifelse(element_data <= (threshold*.75), 'limegreen', ifelse(element_data > (threshold*.75) & element_data <= (threshold*.9), 'darkgreen',
                                             ifelse(element_data > (threshold*.9) & element_data <= (threshold*1.1), 'yellow', 
                                                    ifelse(element_data > (threshold*1.1) & element_data < (threshold*2), 'red', 
@@ -176,6 +198,7 @@ server <- function(input, output, session) {
     return(elemental_thresholds)
   }
   
+  #Based on user selection the dataframe is selected
   small_sample_data <- reactive({
     if(input$data == "Lichen"){
       lichen_database %>%
@@ -189,26 +212,18 @@ server <- function(input, output, session) {
       plot_database
     }
     
-    # if(input$region_selector != "No Selection"){
-    #   database %>% filter(nfs_reg == as.numeric(input$region_selector))
-    # }else{
-    #   database
-    #}
-    
    })
   
   
-  
+#populates the national forest selector   
 observe({
   updateSelectizeInput(session, 'national_forest_selector', choices = c("No Selection",sort(as.vector(unique(small_sample_data()$area)))), selected = "No Selection",server = TRUE)
 })
       
-    
+
+#filters the wilderness selector basedo on user selection in the national forest selector    
   observeEvent(input$national_forest_selector, {
-    #print("We started the update selector observe")
-    #print(length(small_sample_data()))
     if(!is.null(small_sample_data()) & length(input$national_forest_selector) != 0  & input$national_forest_selector != "No Selection"){
-      #print("Am I getting here? This is the wilderness selector")
       wildernesses = small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector)%>% select(wilderns) %>% unique() %>% as.vector()
       updateSelectizeInput(session, 'wilderness', choices = c("No Selection",wildernesses),server = TRUE)
       
@@ -219,17 +234,16 @@ observe({
       }
 
     if(input$data == "Elemental" & (input$national_forest_selector != "No Selection" | input$wilderness != "No Selection" )){
-      #print("This is the lichen selector")
       lichen = small_sample_data() %>% filter(small_sample_data()$area == input$national_forest_selector)%>% select(sciname) %>% unique() %>% as.vector()
       updateSelectizeInput(session, 'lichen_selector', choices = c("No Selection",lichen),server = TRUE)
     }else if(input$data == "Elemental" & input$national_forest_selector == "No Selection" & input$wilderness == "No Selection"){
-      #print("Do we come here?")
       lichen = small_sample_data() %>% select(sciname) %>% unique() %>% as.vector()
       updateSelectizeInput(session, 'lichen_selector', choices = c("No Selection",lichen),server = TRUE)
     }
 
   })
   
+  #filters the current round choices available to the user based on wilderness and national forest selections
   round_choices <- reactive({
     if(input$data == "Elemental"){
       if(!is.null(input$lichen_selector)){
@@ -264,40 +278,29 @@ observe({
 
   })
 
+  #filters and updates the data used for the map based on user selection
 
   fData <- reactive({
-    # if(input$region_selector != "No Selection"){
-    #   data_to_send = small_sample_data()
-    # }
     
+    #filters the data based on round year
     if(is.null(input$roundYear)){
-      #print("This is the null input filter")
-      #print(input$roundYear)
-      #print(round_choices())
       data_to_send = small_sample_data() %>% filter(!small_sample_data()$roundno %in% round_choices())
       data_to_send
     }else{
-      #print('This is where the rounds are filtered')
       exclude = setdiff(round_choices(), input$roundYear)
       if(length(exclude) != 0){
-        #print("Exclude does not equal 0")
-        print(input$roundYear)
         data_to_send = small_sample_data()  %>% filter(!small_sample_data() $roundno %in% exclude)
         data_to_send
       }else{
-        #print("Exclude DOES equal 0")
-        #print(input$roundYear)
         data_to_send =small_sample_data()  %>% filter(small_sample_data() $roundno %in% input$roundYear)
         data_to_send
       }
     }
     
-    #print("a lichen is being selected")
+  #if the dataframe is the elemental data it is filtered by selected lichen species
     if(input$data == "Elemental"){
     if(!is.null(input$lichen_selector)){
-      #print("in Null selector")
       if(input$lichen_selector != "No Selection"){
-        #print("a lichen is being selected")
         if(input$wilderness == "No Selection" & input$national_forest_selector == "No Selection" ){
           data_to_send = data_to_send %>% filter(data_to_send$sciname == input$lichen_selector)
           data_to_send
@@ -310,7 +313,6 @@ observe({
         }
       }else{
         if(input$wilderness != "No Selection"){
-          #print("we are in the first wilderness if statement")
           data_to_send = data_to_send %>% filter(data_to_send$wilderns == input$wilderness) 
           data_to_send
         }else{
@@ -320,7 +322,6 @@ observe({
       }
     }else{
       if(input$wilderness != "No Selection"){
-        #print("we are in the second wilderness if statement")
         data_to_send = data_to_send %>% filter(data_to_send$wilderns == input$wilderness) 
         data_to_send
       }else{
@@ -338,9 +339,7 @@ observe({
         data_to_send
       }
       }else{
-        #print("We are in the else for the elemental selector")
       if(input$wilderness != "No Selection"){
-        #print("we are in the second wilderness if statement")
         data_to_send = data_to_send %>% filter(data_to_send$wilderns == input$wilderness) 
         data_to_send
       }else{
@@ -348,15 +347,11 @@ observe({
         data_to_send
       }
     }
-    
-
-
       })
   
-  
+ #returns the current species selected by the user 
   current_species <- reactive({
     if(input$data == "Elemental"){
-      #print("we shouldn't be here")
       if(input$wilderness != "No Selection"){
         small_sample_data() %>% filter(small_sample_data()$wilderns == input$wilderness) %>% select(sciname) %>% pull() %>% unique() %>% as.vector() %>% sort()
       }else{
@@ -365,6 +360,7 @@ observe({
     }
   })
   
+  #reset the single point selection to allow the user to return to the main graph
   observeEvent(input$resetSelection,{
     values$current_plot = NULL
     if(input$data == "Elemental"){
@@ -398,10 +394,13 @@ observe({
 
   })
   
+  #this is the format the data needs to be in to allow the map, graph, and data table to commincate and filter
   filteredData <- SharedData$new(fData)
   
   #this gives the map in the UI output its data
   map_reactive <- reactive({
+    
+    #how the dots on the map are color coded
     fillColor = "purple"
     if(input$data == "Elemental"){
       if(length(input$plot_type) != 0 & length(input$element_selector) != 0 & length(input$lichen_selector) != 0){
@@ -410,6 +409,7 @@ observe({
       }else{
         fillColor = color_function(input$element_selector, input$lichen_selector, filteredData$data())
         
+        #assigns the legend to the map
         leafletProxy("mymap", data = filteredData)%>%
           addLegend('bottomright', colors = c("limegreen", 'darkgreen',"yellow", "red", "magenta", "blue") , labels=c("<75% of threshold", "Between 75% and 90% of threshold", "Between 90% and 110% of threshold","Between 110% and 200% of threshold", ">200% of threshold", "NA") ,
                     title = 'Thresholds',
@@ -418,7 +418,7 @@ observe({
       }
     }else if(input$data == "Plot"){
       if(length(input$plot_type) != 0 & length(input$airscore_value) != 0 & input$national_forest_selector != "No Selection"){
-        
+        #these assign the max value for the plot data color gradient
         if(input$airscore_value == 'cmaq_n_3yroll'){
           current_max = ceiling(max(plot_database$cmaq_n_3yroll, na.rm = T))
           legend_value = "Value"
@@ -457,7 +457,6 @@ observe({
           legend_value = "Count"
         }
         
-        print(current_max)
         pal <- colorNumeric(
           palette = "OrRd",
           domain = 0:current_max)
@@ -475,7 +474,7 @@ observe({
     }
     
 
-    
+    #this is the actual leaflet map
     leaflet(data = filteredData) %>%
       addProviderTiles(providers$Stamen.TonerLite, options = providerTileOptions(noWrap = TRUE), group = "Basic Map") %>%
       addProviderTiles(providers$Esri.WorldImagery, options = providerTileOptions(noWrap = TRUE), group = "Topographical")%>%
@@ -485,8 +484,9 @@ observe({
       baseGroups = c("Lined Topographical", "Topographical","Basic Map"),
       overlayGroups = c("Show Legend"),
       options = layersControlOptions(collapsed = FALSE) )
-          })
+   })
   
+  #removes the legend from the map according to user input
   observeEvent(input$mymap_groups,{
     if(input$data == "Elemental"){
       if(!"Show Legend" %in% input$mymap_groups){
@@ -501,6 +501,7 @@ observe({
 
   })
   
+  #removes or adds the dataframe specific selection boxes
   observeEvent(list(input$data, input$national_forest_selector, input$wilderness), {
     
     if(input$data != "Elemental"){
@@ -517,11 +518,8 @@ observe({
         return(NULL)
       })
     }else if(input$data == "Elemental"){
-      #selectizeInput(label = "Indicator Lichen Species", inputId = 'lichen_selector', choices = c("No Selection",as.vector(unique(small_sample_data()$sciname))))
-      #print("was this updated?")
       
       if(input$wilderness == "No Selection" & input$national_forest_selector == "No Selection"){
-        #print("are we getting past the fData if")
         output$lichen_ui <- renderUI(
           selectizeInput(label = "Indicator Lichen Species", inputId = 'lichen_selector', choices = c("No Selection",sort(as.vector(unique(small_sample_data()$sciname))))),
           )
@@ -549,11 +547,9 @@ observe({
       })
     }else if(input$data == "Plot"){
       output$airscore_ui <-renderUI(
-        #selector = "#placeholder",
         selectInput("airscore_value", "Airscore Value", choices = c("Nitrogen Airscore (Climate Adjusted)"="n_airscore_clim_adj", "Nitrogen Airscore"="n_airscore","Sulfur Airscore (Climate Adjusted)" = "s_airscore_clim_adj", "Sulfur Airscore" = "s_airscore","Nitrogen Deposition" = 'cmaq_n_3yroll', "Sulfur Deposition" = 'cmaq_s_3yroll', "Oligotroph Species Richness" = "spprich_oligo", 'Sensitive Species Richness' = 'spprich_s_sens', "Total Species Richness" = 'spprich_total', 'Epiphytic Macro Lichen Richness'='spprich_epimac', 'Forage Lichen Richness'='spprich_forage','Cyano Lichen Richness'='spprich_cyano'))
       )
       output$airscore_plot_ui <-renderUI(
-        #selector = "#placeholder",
         selectInput("plot_type", "Output Type", choices = c("Scatter Plot"="scatter", "Box Plot" = "box", "Histogram"="histogram", "Box Plot (whole selection area)" = 'whole box plot'))
       )
     }
@@ -563,17 +559,17 @@ observe({
       })
     }else if(input$data == "Lichen"){
       output$lichen_list_ui <-renderUI(
-        #selector = "#placeholder",
         selectInput("lichen_type", "Select Lichen Type", choices = c("All Lichen"))
       )
     }
   })
      
-  
+  #outputs the leaflet map
   output$mymap <- renderLeaflet({
     map_reactive()
   })
   
+  #returns the most recent user selection to the graphin tools
   currentPlotData <- reactive({
     if(is.null(filteredData$selection())){
       filteredData$data()
@@ -582,11 +578,12 @@ observe({
     }
   })
   
+  #is called by the graph output and returns the user selected graph for the elemental data
   element_plot_reactive <- reactive({
     
     if(input$data == "Elemental"){
     
-    
+    #almost identical to the color function above, allows the scatter plot points to be colored the same as the map points
     element_data = currentPlotData() %>% select(input$element_selector) %>% drop_na() %>% pull()
     
     vec = elemental_database %>% filter(sciname == input$lichen_selector) %>% select(input$element_selector) %>% drop_na() %>% pull()
@@ -608,7 +605,7 @@ observe({
                                                                                                                        ifelse(element_data > (threshold*1.1) & element_data < (threshold*2), 'red', 
                                                                                                                                ifelse(element_data >= (threshold*2), 'magenta',"blue"))))))
 
-    
+    #These go through each of the available graphs and returns the one the user selected
     if(nrow(currentPlotData()) != 0){
     if(input$plot_type == "box"){
       first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$element_selector]], x=plotno))+
@@ -632,16 +629,13 @@ observe({
     }else if(input$plot_type == "histogram"){
       #elemental <- currentPlotData() %>% filter(input$element_selector != 0)
       element <- currentPlotData() %>% select(input$element_selector) %>% unlist() %>% unname()
-      #print(str(element))
-      #print(mean(element, na.rm = T))
-      #print(sd(element, na.rm = T))
       first_plot <- ggplot(currentPlotData(), aes(x = .data[[input$element_selector]]))+
         geom_histogram(aes(y = ..density..))+
         facet_wrap(~roundno, nrow = length(input$roundYear), scales = "free")+
         theme_bw()+
         theme(axis.text.x = element_text(angle = 90, size = 10), axis.text.y = element_text(size = 10))+
-        labs(x = "Survey Plot", title = paste("Histogram of",input$element_selector ,"Concentration"))+
-        stat_function(fun = dnorm, col = 'red',args = list(mean=mean(element, na.rm = T), sd=sd(element, na.rm = T)))
+        labs(x = "Survey Plot", title = paste("Histogram of",input$element_selector ,"Concentration"))
+      #This call turns it into a plotly object rather than ggplot so it works with crosstalk
       ggplotly(first_plot,height = 500, width = 1500)
       
     }else if(input$plot_type == "whole box plot"){
@@ -667,6 +661,7 @@ observe({
 }
   })
   
+  #This creates the graphs for the plot dataframe selector 
   airscore_plot_reactive <- reactive({
     if(input$plot_type == "box"){
       first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x=plot))+
@@ -689,7 +684,6 @@ observe({
     }else if(input$plot_type == "histogram"){
       first_plot <- ggplot(currentPlotData(), aes(x = .data[[input$airscore_value]]))+
         geom_histogram()+
-        #geom_jitter(color="black", size=0.4, alpha=0.9) +
         facet_wrap(~roundno, nrow = length(input$roundYear), scales = "free")+
         theme_bw()+
         theme(axis.text.x = element_text(angle = 90, size = 10), axis.text.y = element_text(size = 10))+
@@ -699,7 +693,6 @@ observe({
       if(input$national_forest_selector != "No Selection" & input$wilderness == "No Selection"){
         first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x=area))+
           geom_boxplot()+
-          #geom_jitter(color="black", size=0.4, alpha=0.9) +
           facet_wrap(~roundno, ncol = length(input$roundYear), scales = "free")+
           theme_bw()+
           theme(axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10))+
@@ -708,7 +701,6 @@ observe({
       }else{
         first_plot <- ggplot(currentPlotData(), aes(y = .data[[input$airscore_value]], x=wilderns))+
           geom_boxplot()+
-          #geom_jitter(color="black", size=0.4, alpha=0.9) +
           facet_wrap(~roundno, ncol = length(input$roundYear), scales = "free")+
           theme_bw()+
           theme(axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10))+
@@ -718,6 +710,7 @@ observe({
     }
   })
   
+  #This outputs the plot and data table based on user selection, populates the ui above
   observe({
       if(input$data == "Elemental"){
         if(length(input$plot_type) != 0 & length(input$element_selector) != 0 & length(input$lichen_selector) != 0){
@@ -777,7 +770,6 @@ observe({
       }
     if(input$data == "Plot"){
       if(input$national_forest_selector == "No Selection"){
-       #print("are we getting here?")
         output$dataPlot <- renderUI({
           renderText({
             "Select a National Forest to produce a plot"
@@ -785,7 +777,6 @@ observe({
           })
         })
       }else if(length(input$plot_type) != 0 & length(input$airscore_value) != 0){
-        #print("this is where we call the plot reactive")
         if(nrow(currentPlotData()) != 0){
         output$dataPlot <-renderUI({
           renderPlotly({
@@ -864,8 +855,10 @@ observe({
     }
     })
   
+  #This value allows users to select a specific plot and for the program to know where they selected- its reassigned in another function
   values <- reactiveValues(current_megadbid = NULL, current_plot = NULL)
   
+  #This function outputs a single plot's graph when a user selected in the elemental mapper 
   single_element_plot_reactive <- reactive({
     
     
@@ -874,16 +867,6 @@ observe({
     vec = elemental_database %>% filter(sciname == input$lichen_selector) %>% select(input$element_selector) %>% drop_na() %>% pull()
     
     threshold = quantile(vec, 0.9)
-    explanation = "This was determined through using the 90% quartile of the filtered data"
-    
-    # output$descriptionText <- renderUI({
-    #   renderText({
-    #     paste("The current threshold being using is", round(threshold, 2),' ppm.',explanation)
-    #     
-    #   })
-    # })
-    
-    
     
     data_for_plot = fData() %>% filter(plotno == values$current_plot) %>% mutate(Color = ifelse(element_data <= (threshold*.75), 'green', ifelse(element_data > (threshold*.75) & element_data <= (threshold*.9), 'darkgreen', ifelse(element_data > (threshold*.9) & element_data <= (threshold*1.1), 'yellow', 
                                                                                                                                                                                                       ifelse(element_data > (threshold*1.1) & element_data < (threshold*2), 'red', 
@@ -902,7 +885,6 @@ observe({
       ggplotly(first_plot,height = 500, width = 500)
       
     }else if(input$plot_type == "scatter"){
-      #print(data_for_plot)
       first_plot <- ggplot(data_for_plot, aes(y = .data[[input$element_selector]], x=plotno,  color = Color))+
         scale_color_identity()+
         geom_jitter()+
@@ -941,6 +923,7 @@ observe({
     
   })
   
+  #This function outputs a single plot's graph when a user selected in the plot mapper 
   single_airscore_plot_reactive <- reactive({
     data_for_plot = fData() %>% filter(plot == values$current_plot)
     if(input$plot_type == "box"){
@@ -995,12 +978,14 @@ observe({
   })
   
 
+  #This function registers a user's click on a plot point and returns the appropriate plot
   observeEvent(input$mymap_marker_click, {
     click<-input$mymap_marker_click
     if(is.null(click)){
       return()
     }else{
 
+      #If a user selects a plot point in the lichen mapper it returns the lichen found at that specific point
       if(input$data == "Lichen"){
 
         values$current_plot = fData() %>% filter(row_id == click$id) %>% select(plot_use) %>% pull()
@@ -1049,7 +1034,7 @@ observe({
 
   })
 
-
+#This allows users to download their current data selection
   output$downloadData <- downloadHandler(
     filename = function() {
       # Use the selected dataset as the suggested file name
